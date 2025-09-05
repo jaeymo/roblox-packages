@@ -3,6 +3,6 @@ name = "jaey-dev/class"
 description = "Makes OOP faster to write"
 license = "MIT"
 authors = ["Jaeymo"]
-version = "0.1.0"
+version = "0.1.1"
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"
