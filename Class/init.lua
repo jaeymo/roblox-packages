@@ -1,6 +1,16 @@
 --!strict
 local Class = {}
 
+--[[
+	Class: A library for making OOP faster to write
+	Author: jaey-dev
+	Version: 0.1.1
+	License: MIT
+	Created: 09/02/2025
+	
+	For issues or feedback message `jaeymo` on Discord!
+]]
+
 export type ClassLike = {
 	__index: any,
 	__name: string,
