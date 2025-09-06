@@ -1,11 +1,12 @@
 [package]
-name = "jaey-dev/wrapper"
-description = "Manages class lifecycles from tagged Instances"
-version = "0.1.2"
+name = "jaeymo/wrapper"
+description = "Manages instantiating objects from tagged Instances"
+version = "0.2.6"
 license = "MIT"
-authors = ["Jaeymo"]
+authors = ["jaeymo"]
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"
 
 [dependencies]
-Trove = "sleitnick/trove@1.5.1"
+trove = "sleitnick/trove@1.5.1"
+general-util = "jaeymo/general-util@0.2.1"

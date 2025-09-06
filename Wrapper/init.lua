@@ -1,59 +1,36 @@
 --!strict
 
 --[[
-	Wrapper: A library for instantiating OOP objects based off tagged instances
-	Author: jaey-dev
-	Version: 0.1.1
+	Wrapper: Manages instantiating objects from tagged Instances
+	Author: jaeymo
+	Version: 0.2.6
 	License: MIT
-	Created: 09/01/2025
+	Created: 09/06/2025
 	
 	For issues or feedback message `jaeymo` on Discord!
 ]]
 
 local CollectionService = game:GetService("CollectionService")
-local HttpService = game:GetService("HttpService")
 
-local Trove = require(script.Parent.Trove)
+local GeneralUtil = require(script.Parent["general-util"])
+local Trove = require(script.Parent.trove)
 
 local PREFIX = "WRAPPER"
 local DEFAULT_OPTIONS = 
 {
+	Methods = {
+		Init = "Init",
+		Constructor = "new",
+		Destroy = "Destroy",
+		Startup = "OnStart",
+	},
+
 	Debug = false,                                          -- Whether debug mode is enabled (extra logs, warnings, etc.)
 	Context = nil,                                          -- The context provided to the class
 	Logging = false,                                        -- Logging of all instances being processed
 	AutoInit = true,                                        -- Automatically call the init method on creation
-	InitMethod = "Init",                                    -- The name of the initialization method to call
-	StartupMethod = "OnStart",                              -- The method to call when the component starts up
 	Filter = function(instance: Instance) return true end,  -- Function to filter instances
 }
-
-local function createGUID(prefix: string?): string
-	local guid = HttpService:GenerateGUID(false)
-	if prefix then
-		return prefix .. "_" .. guid
-	end
-
-	return guid
-end
-
-local function safecall(object: any, fn: string, dbg: boolean?, ...: any)
-	local method = (object :: any)[fn]
-
-	if typeof(method) == "function" then
-		local ok, result = pcall(method, object, ...)
-
-		if not ok and dbg then
-			warn(`[{PREFIX}] Error calling "{fn}" in {object}: {result}`)
-		end
-
-		return result
-
-	elseif dbg then
-		warn(`[{PREFIX}] Missing method "{fn}" in object: {object}`)
-	end
-
-	return nil
-end
 
 local function watchTag(tag: string, reverse: boolean, callback: (Instance) -> (), mustBeDescendantOf: Instance?): RBXScriptConnection
 	assert(callback ~= nil, "Callback parameter is missing, did you forget your reverse parameter?")
@@ -92,13 +69,17 @@ end
 
 export type Options = 
 {
+	Methods: {
+		Init: string,
+		Startup: string,
+		Destroy: string,
+		Constructor: string,
+	},
 	Context: any?,
 	GUID: string?,
 	Logging: boolean?,
 	Debug: boolean?,
 	AutoInit: boolean?,
-	InitMethod: string?,
-	StartupMethod: string?,
 	Filter: ((object: Instance) -> boolean)?,
 }
 
@@ -151,11 +132,11 @@ function Wrapper.new<T>(class: Class<T>, tag: string, options: Options?): Wrappe
 	properties.IdMap = {}
 	
 	-- if there is a startup method, we will pass this wrapper object and the context to that func
-	local startup = properties.Options.StartupMethod
+	local startup = properties.Options.Methods.Startup
 	local context = properties.Options.Context
-	local debug = properties.Options.Debug
+	local dbg = properties.Options.Debug
 	if startup then
-		safecall(class, startup, debug, properties, context)
+		GeneralUtil.DebugSafecall(class, startup, dbg, properties, context)
 	end
 	
 	local self = setmetatable(properties, Wrapper) :: Wrapper<T>
@@ -226,7 +207,7 @@ end
 	```
 ]=]
 function Wrapper.Call<T>(self: Wrapper<T>, object: T, fn: string, ...: any)
-	return safecall(object, fn, self.Options.Debug, ...)
+	return GeneralUtil.DebugSafecall(object, fn, self.Options.Debug, ...)
 end
 
 --[=[
@@ -270,9 +251,10 @@ function Wrapper.Apply<T>(self: Wrapper<T>, inst: Instance): T?
 	end
 	
 	local objectTrove = Trove.new()
-	local guid = self.Options.GUID and createGUID(self.Options.GUID)
+	local guid = self.Options.GUID and GeneralUtil.NewGUID(self.Options.GUID)
 	
-	local s, object = pcall(self.Class.new, inst, objectTrove, guid)
+	local constructor = self.Options.Methods.Constructor or DEFAULT_OPTIONS.Methods.Constructor
+	local s, object = pcall(self.Class[constructor], inst, objectTrove, guid)
 	if not s then
 		objectTrove:Destroy()
 
@@ -292,9 +274,9 @@ function Wrapper.Apply<T>(self: Wrapper<T>, inst: Instance): T?
 	self.ObjectTroves[inst] = objectTrove
 	
 	if self.Options.AutoInit then
-		local init = self.Options.InitMethod or DEFAULT_OPTIONS.InitMethod
+		local init = self.Options.Methods.Init or DEFAULT_OPTIONS.Methods.Init
 		local dbg = self.Options.Debug or DEFAULT_OPTIONS.Debug
-		safecall(object, init, dbg)
+		GeneralUtil.DebugSafecall(object, init, dbg)
 	end
 	
 	if self.Options.Logging then
@@ -342,8 +324,9 @@ function Wrapper.Revoke<T>(self: Wrapper<T>, inst: Instance)
 	
 	local object = self.Objects[inst]
 	if object then
+		local destroy = self.Options.Methods.Destroy or DEFAULT_OPTIONS.Methods.Destroy
 		local dbg = self.Options.Debug or DEFAULT_OPTIONS.Debug
-		safecall(object, "Destroy", dbg, object)
+		GeneralUtil.DebugSafecall(object, destroy, dbg)
 		
 		self.Objects[inst] = nil
 		
