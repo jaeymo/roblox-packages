@@ -1,8 +1,8 @@
 [package]
-name = "jaey-dev/resourceallocator"
+name = "jaeymo/resource-allocator"
 description = "Module to handle weighted cost-budget systems"
 license = "MIT"
-version = "0.1.0"
-authors = ["Jaeymo"]
+version = "0.1.1"
+authors = ["jaeymo"]
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"

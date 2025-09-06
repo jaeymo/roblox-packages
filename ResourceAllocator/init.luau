@@ -2,13 +2,21 @@
 
 --[[
 	ResourceAllocator: Module to handle weighted cost-budget systems
-	Author: jaey_dev
-	Version: 0.1.0
+	Author: jaeymo
+	Version: 0.1.1
 	License: MIT
-	Created: 09/01/2025
+	Created: 09/06/2025
 	
 	For issues or feedback message `jaeymo` on Discord!
 ]]
+
+local ResourceAllocator = {}
+ResourceAllocator.__index = ResourceAllocator
+
+type ItemList = {[string]: {Weight: number, Cost: number}}
+type Properties = { Items: ItemList }
+
+export type ResourceAllocator = typeof(setmetatable({} :: Properties, ResourceAllocator))
 
 local function getWeightedList(items: ItemList)
 	local weighted = {}
@@ -20,14 +28,6 @@ local function getWeightedList(items: ItemList)
 
 	return weighted
 end
-
-local ResourceAllocator = {}
-ResourceAllocator.__index = ResourceAllocator
-
-type ItemList = {[string]: {Weight: number, Cost: number}}
-
-type Properties = { Items: ItemList }
-export type ResourceAllocator = typeof(setmetatable({} :: Properties, ResourceAllocator))
 
 --[=[
 	@return ResourceAllocator
@@ -47,7 +47,6 @@ end
 	@method BatchAddItems
 	@within ResourceAllocator
 	@param items ItemList
-	@return void
 	Adds multiple items to the allocator's item list in a single operation.
 	
 	```lua
@@ -68,7 +67,6 @@ end
 	@param name string
 	@param cost number
 	@param weight number
-	@return void
 	Adds a single item with specified cost and weight to the allocator's item list.
 	
 	```lua
@@ -95,7 +93,7 @@ end
 	local result = allocator:Allocate(25) -- e.g., { Sword = 2, Shield = 1 }
 	```
 ]=]
-function ResourceAllocator.Allocate(self: ResourceAllocator, totalBudget: number): {[string]: number}
+function ResourceAllocator.Allocate(self: ResourceAllocator, totalBudget: number): { [string]: number }
 	local result = {}
 	local budget = totalBudget
 	local weightedPool = getWeightedList(self.Items)
@@ -116,7 +114,6 @@ end
 --[=[
 	@method Clean
 	@within ResourceAllocator
-	@return void
 	Clears all items from the allocator's item list.
 	
 	```lua
