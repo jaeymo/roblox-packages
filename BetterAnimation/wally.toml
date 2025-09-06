@@ -1,8 +1,8 @@
 [package]
-name = "jaey-dev/betteranimation"
+name = "jaeymo/better-animation"
 description = "Simplifies client-side animation management"
 version = "0.1.0"
 license = "MIT"
-authors = ["Jaeymo"]
+authors = ["jaeymo"]
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"

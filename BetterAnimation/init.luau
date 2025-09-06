@@ -2,10 +2,10 @@
 
 --[[
 	BetterAnimation: A module to make handling client-animations easier
-	Author: jaey_dev
+	Author: jaeymo
 	Version: 0.1.0
 	License: MIT
-	Created: 09/01/2025
+	Created: 09/06/2025
 
 	For issues or feedback message `jaeymo` on Discord!
 ]]
@@ -269,6 +269,21 @@ end
 	@param considerIsPlaying boolean?
 	@return AnimationTrack?
 	Plays a random animation that passes the optional predicate filter.
+
+	```lua
+	local track = anim:PlayRandom(function(name, data)
+		return name:find("attack") and not data.track.IsPlaying
+	end)
+
+	--[[
+		if the loaded tracks consisted of:
+		- "attack_1"
+		- "attack_2"
+		- "run"
+
+		it would play either "attack_1" or "attack_2", never considering "run"
+	]]
+	```
 ]=]
 function BetterAnimation.PlayRandom(self: BetterAnimation, predicate: ((string, {track: AnimationTrack, metadata: AnimationMetadata}) -> boolean)?, considerIsPlaying: boolean?): AnimationTrack?
 	if not self:IsRegistered() then
@@ -343,7 +358,7 @@ function BetterAnimation.StopAll(self: BetterAnimation): { AnimationTrack }?
 		end
 	end
 	
-	return playedTracks -- could return an empty list, it should be fine tho
+	return playedTracks
 end
 
 --[=[
