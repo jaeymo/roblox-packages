@@ -1,8 +1,8 @@
 [package]
-name = "jaey-dev/general-util"
+name = "jaeymo/general-util"
 description = "Simple utility functions"
 license = "MIT"
-authors = ["Jaeymo"]
+authors = ["jaeymo"]
 version = "0.2.1"
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"
