@@ -1,8 +1,8 @@
 [package]
-name = "jaey-dev/class"
+name = "jaeymo/class"
 description = "Makes OOP faster to write"
 license = "MIT"
-authors = ["Jaeymo"]
+authors = ["jaeymo"]
 version = "0.1.1"
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"

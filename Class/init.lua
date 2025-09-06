@@ -3,11 +3,11 @@ local Class = {}
 
 --[[
 	Class: A library for making OOP faster to write
-	Author: jaey-dev
+	Author: jaeymo
 	Version: 0.1.1
 	License: MIT
-	Created: 09/02/2025
-	
+	Created: 09/06/2025
+
 	For issues or feedback message `jaeymo` on Discord!
 ]]
 
@@ -23,7 +23,10 @@ export type Class<T> = ClassLike & {
 }
 
 function Class.newClass<T>(className: string): Class<T>
-	assert(type(className) == "string", `[{script.Name}] Expected type "string", got type: {type(className)}`)
+	local classNameType = type(className)
+	if classNameType ~= "string" then 
+		warn(`[{script.Name}] Expected type string, got type: {classNameType}`)
+	end
 	
 	local cls = {} :: Class<T>
 	cls.__name = className
