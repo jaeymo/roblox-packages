@@ -1,0 +1,10 @@
+[package]
+name = "jaeymo/value-service"
+description = "Simplifies managing values between client and server"
+license = "MIT"
+version = "0.1.0"
+authors = ["jaeymo"]
+registry = "https://github.com/UpliftGames/wally-index"
+realm = "shared"
+
+[dependencies]
