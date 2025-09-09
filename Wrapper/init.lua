@@ -3,7 +3,7 @@
 --[[
 	Wrapper: Manages instantiating objects from tagged Instances
 	Author: jaeymo
-	Version: 0.2.6
+	Version: 0.2.7
 	License: MIT
 	Created: 09/06/2025
 	
@@ -13,7 +13,7 @@
 local CollectionService = game:GetService("CollectionService")
 
 local GeneralUtil = require(script.Parent["general-util"])
-local Trove = require(script.Parent.trove)
+local Trove = require(script.Parent["trove"])
 
 local PREFIX = "WRAPPER"
 local DEFAULT_OPTIONS = 
@@ -327,11 +327,11 @@ function Wrapper.Revoke<T>(self: Wrapper<T>, inst: Instance)
 		local destroy = self.Options.Methods.Destroy or DEFAULT_OPTIONS.Methods.Destroy
 		local dbg = self.Options.Debug or DEFAULT_OPTIONS.Debug
 		GeneralUtil.DebugSafecall(object, destroy, dbg)
+
+		setmetatable(object :: any, nil)
+		table.clear(object :: any)
 		
 		self.Objects[inst] = nil
-		
-		table.clear(object :: any)
-		setmetatable(object :: any, nil)
 	end
 	
 	if self.Options.Logging then
