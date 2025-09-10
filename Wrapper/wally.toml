@@ -1,7 +1,7 @@
 [package]
 name = "jaeymo/wrapper"
 description = "Manages instantiating objects from tagged Instances"
-version = "0.2.8"
+version = "0.2.9"
 license = "MIT"
 authors = ["jaeymo"]
 registry = "https://github.com/UpliftGames/wally-index"
@@ -9,4 +9,5 @@ realm = "shared"
 
 [dependencies]
 trove = "sleitnick/trove@1.5.1"
-general-util = "jaeymo/general-util@0.3.0"
+general-util = "jaeymo/general-util@0.3.1"
+viewer = "jaeymo/viewer@0.1.0"

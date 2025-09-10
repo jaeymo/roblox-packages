@@ -3,16 +3,14 @@
 --[[
 	Wrapper: Manages instantiating objects from tagged Instances
 	Author: jaeymo
-	Version: 0.2.8
+	Version: 0.2.9
 	License: MIT
 	Created: 09/06/2025
 	
 	For issues or feedback message `jaeymo` on Discord!
 ]]
-
-local CollectionService = game:GetService("CollectionService")
-
 local GeneralUtil = require(script.Parent["general-util"])
+local Viewer = require(script.Parent["viewer"])
 local Trove = require(script.Parent["trove"])
 
 local PREFIX = "WRAPPER"
@@ -32,29 +30,6 @@ local DEFAULT_OPTIONS =
 	Filter = function(instance: Instance) return true end,  -- Function to filter instances
 	Resolver = function(instance: Instance) return nil end,
 }
-
-local function watchTag(tag: string, reverse: boolean, callback: (Instance) -> (), mustBeDescendantOf: Instance?): RBXScriptConnection
-	assert(callback ~= nil, "Callback parameter is missing, did you forget your reverse parameter?")
-	local func = callback
-
-	local function check(instance: Instance)
-		if mustBeDescendantOf and not instance:IsDescendantOf(mustBeDescendantOf) then
-			return
-		end
-
-		func(instance)
-	end
-
-	if reverse then
-		return CollectionService:GetInstanceRemovedSignal(tag):Connect(check)
-	else
-		for _, tagged in CollectionService:GetTagged(tag) do
-			task.spawn(check, tagged)
-		end
-
-		return CollectionService:GetInstanceAddedSignal(tag):Connect(check)
-	end
-end
 
 --[=[
 	@class Wrapper
@@ -376,11 +351,11 @@ function Wrapper._watch<T>(self: Wrapper<T>)
 	if self._isActive then return end
 	self._isActive = true
 	
-	self.Trove:Add(watchTag(self.Tag, false, function(inst: Instance)
+	self.Trove:Add(Viewer.WatchTag(self.Tag, false, function(inst: Instance)
 		self:Apply(inst)
 	end))
 	
-	self.Trove:Add(watchTag(self.Tag, true, function(inst: Instance)
+	self.Trove:Add(Viewer.WatchTag(self.Tag, true, function(inst: Instance)
 		self:Revoke(inst)
 	end))
 end
