@@ -3,7 +3,7 @@
 --[[
 	GeneralUtil: A module for generic utility functions
 	Author: jaeymo
-	Version: 0.3.0
+	Version: 0.3.1
 	License: MIT
 	Created: 09/06/2025
 
@@ -53,7 +53,7 @@ end
 	Safely calls a function with a debug parameter
 ]=]
 function GeneralUtility.DebugSafecall(tbl: any, fn: string, dbg: boolean, ...: any): any?
-	local method = tbl[fn]
+	local method = tbl and tbl[fn]
 	
 	if typeof(method) == "function" then
 		local ok, result = pcall(method, tbl, ...)
