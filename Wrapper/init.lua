@@ -3,7 +3,7 @@
 --[[
 	Wrapper: Manages instantiating objects from tagged Instances
 	Author: jaeymo
-	Version: 0.2.7
+	Version: 0.2.8
 	License: MIT
 	Created: 09/06/2025
 	
@@ -30,6 +30,7 @@ local DEFAULT_OPTIONS =
 	Logging = false,                                        -- Logging of all instances being processed
 	AutoInit = true,                                        -- Automatically call the init method on creation
 	Filter = function(instance: Instance) return true end,  -- Function to filter instances
+	Resolver = function(instance: Instance) return nil end,
 }
 
 local function watchTag(tag: string, reverse: boolean, callback: (Instance) -> (), mustBeDescendantOf: Instance?): RBXScriptConnection
@@ -81,6 +82,7 @@ export type Options =
 	Debug: boolean?,
 	AutoInit: boolean?,
 	Filter: ((object: Instance) -> boolean)?,
+	Resolver: ((instance: Instance) -> Class<any>)?,
 }
 
 export type Trove = Trove.Trove
@@ -94,7 +96,7 @@ type WrapperProperties<T> = {
 	Trove: Trove.Trove,
 	Options: Options,
 	Tag: string,
-	Class: Class<T>,
+	Class: Class<T>?,
 
 	ObjectTroves: { [Instance]: Trove.Trove },
 	Objects: { [Instance]: T },
@@ -113,7 +115,7 @@ export type Wrapper<T> = typeof(setmetatable({} :: WrapperProperties<T>, Wrapper
 	local wrapper = Wrapper.new()
 	```
 ]=]
-function Wrapper.new<T>(class: Class<T>, tag: string, options: Options?): Wrapper<T>
+function Wrapper.new<T>(class: Class<T>?, tag: string, options: Options?): Wrapper<T>
 	local properties = {}
 	
 	properties.Options = options or {} :: Options
@@ -252,9 +254,20 @@ function Wrapper.Apply<T>(self: Wrapper<T>, inst: Instance): T?
 	
 	local objectTrove = Trove.new()
 	local guid = self.Options.GUID and GeneralUtil.NewGUID(self.Options.GUID)
+
+	local class = self.Options.Resolver and self.Options.Resolver(inst) or self.Class
+	if not class then
+		objectTrove:Destroy()
+
+		if self.Options.Debug then
+			warn(`[{PREFIX}] No class could be resolved for {inst:GetFullName()}`)
+		end
+
+		return nil
+	end
 	
 	local constructor = self.Options.Methods.Constructor or DEFAULT_OPTIONS.Methods.Constructor
-	local s, object = pcall(self.Class[constructor], inst, objectTrove, guid)
+	local s, object = pcall(class[constructor], inst, objectTrove, guid)
 	if not s then
 		objectTrove:Destroy()
 
