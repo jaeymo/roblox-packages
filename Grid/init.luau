@@ -3,7 +3,7 @@
 --[[
 	Grid: A module for 2D grid math
 	Author: jaeymo
-	Version: 1.0.1
+	Version: 2.0.0
 	License: MIT
 	Created: 09/13/2025
 	
@@ -21,8 +21,10 @@ local Trove = require(script.Parent["trove"])
 local Heap = require(script.Parent["heap"])
 
 local DIRECTIONS = {Vector2.new(1,0), Vector2.new(-1,0), Vector2.new(0,1), Vector2.new(0,-1)}
-local WORLD_CELL_OFFSET = Vector3.new(0, -5, 0)
+local DIRECTION_MAP = { ["Up"] = Vector2.new(1, 0), ["Down"] = Vector2.new(-1, 0), ["Right"] = Vector2.new(0, 1), ["Left"] = Vector2.new(0, -1), }
+local ROTATION_MAP = { [1] = 90, [2] = 180, [3] = 270, [4] = 0 }
 
+local WORLD_CELL_OFFSET = Vector3.new(0, -5, 0)
 local WORLD_CELL_PROPERTIES = {
 	Color = Color3.fromRGB(134, 166, 255),
 	Material = Enum.Material.Neon,
@@ -30,6 +32,8 @@ local WORLD_CELL_PROPERTIES = {
 	CanCollide = false,
 	Anchored = true,
 }
+
+type CheckMethod = "IsAvailable" | "IsInBounds" | "IsOccupied" | "CanConnectToAny"
 
 type GridProperties = {
 	StateColors: { [number]: Color3 },
@@ -62,9 +66,34 @@ local function createWorldCell(cellSize: number): BasePart
 end
 
 local count = 0
+
 local function getCount(): number
-	count += 1
-	return count
+	count += 1; return count
+end
+
+local function recursiveConvertDirection(tbl: any)
+	if typeof(tbl) == "table" then
+		for k, v in tbl do
+			if typeof(v) == "string" and DIRECTION_MAP[v] then
+				tbl[k] = DIRECTION_MAP[v]
+				tbl["DirectionString"] = v
+			elseif typeof(v) == "table" then
+				recursiveConvertDirection(v)
+			end
+		end
+	end
+end
+
+local function recursiveReverseXY(tbl: any)
+	if typeof(tbl) == "table" then
+		for k, v in tbl do
+			if typeof(v) == "Vector2" then
+				tbl[k] = Vector2.new(v.Y, v.X)
+			elseif typeof(v) == "table" then
+				recursiveReverseXY(v)
+			end
+		end
+	end
 end
 
 --[=[
@@ -115,7 +144,7 @@ end
 ]=]
 function Grid.GetRandom(self: Grid, rng: Random?)
 	rng = rng or Random.new()
-	
+
 	local x = (rng :: Random):NextInteger(0, self.Width - 1)
 	local y = (rng :: Random):NextInteger(0, self.Height - 1)
 
@@ -194,6 +223,20 @@ function Grid.GetVec(self: Grid, key: string): Vector2
 end
 
 --[=[
+	@method GetDirectionFromString
+	@param direction string
+	@return Vector2
+	Gets a vector direction from a string
+
+	```lua
+	local up = grid:GetDirectionFromString("Up") -- Vector2.new(1, 0)
+	```
+]=]
+function Grid.GetDirectionFromString(self: Grid, direction: string): Vector2
+	return DIRECTION_MAP[direction]
+end
+
+--[=[
 	@method IsInBounds
 	@param node Vector2
 	@return boolean
@@ -252,6 +295,39 @@ end
 ]=]
 function Grid.IsAvailable(self: Grid, node: Vector2): boolean
 	return self:IsInBounds(node) and not self:IsOccupied(node)
+end
+
+--[=[
+	@method CanConnectToAny
+	@param start Vector2
+	@param nodes { Vector2 }
+	@return boolean
+	Returns a path from a start node if it can connect to any node
+	in the list of nodes.
+	
+	```lua
+	local start = Vector2.new(0, 0)
+	local nodes = {
+		Vector.new(0, 5),
+		Vector.new(5, 0),
+	}
+	
+	local didConnect, path = grid:CanConnectToAny(start, nodes) -- true, the path from [0, 0] to the connected node
+	```
+]=]
+function Grid.CanConnectToAny(self: Grid, start: Vector2, nodes: { Vector2 }): boolean
+	if not nodes or #nodes == 0 then
+		return false
+	end
+
+	for _, node in nodes do
+		local path = self:AStar(start, node)
+		if path then
+			return true, path
+		end
+	end
+
+	return false
 end
 
 --[=[
@@ -326,10 +402,10 @@ function Grid.SetPivot(self: Grid, pivot: CFrame)
 end
 
 --[=[
-    @method SetPivotToNode
-    @param node Vector2
-    @param pivotCFrame CFrame
-    Sets the pivot based on a specific node and target world CFrame.
+	@method SetPivotToNode
+	@param node Vector2
+	@param pivotCFrame CFrame
+	Sets the pivot based on a specific node and target world CFrame.
 
 	```lua
 	local node = grid:GetPosition("Bottom", "Middle")
@@ -350,12 +426,12 @@ function Grid.SetPivotToNode(self: Grid, node: Vector2, pivotCFrame: CFrame)
 end
 
 --[=[
-    @method TransformRotationally
+	@method TransformRotationally
 	@param targetNode Vector2
-    @param mainNode Vector2
+	@param mainNode Vector2
 	@param rot number
 	@return Vector2
-    Rotates a node around a pivot
+	Rotates a node around a pivot
 
 	```lua
 	local targetNode = Vector2.new(3, 0)
@@ -386,20 +462,20 @@ function Grid.TransformRotationally(self: Grid, targetNode: Vector2, mainNode: V
 end
 
 --[=[
-    @method TransformLocally
+	@method TransformLocally
 	@param targetNode Vector2
-    @param localNode Vector2
-    @param mainNode Vector2
+	@param localNode Vector2
+	@param mainNode Vector2
 	@return Vector2
-    Translates a node from one local coordinate frame to another
+	Translates a node from one local coordinate frame to another
 
 	```lua
-    local targetNode = Vector2.new(3, 0)
-    local localNode = Vector2.new(1, 1)
-    local mainNode = Vector2.new(0, 0)
+	local targetNode = Vector2.new(3, 0)
+	local localNode = Vector2.new(1, 1)
+	local mainNode = Vector2.new(0, 0)
 
-    local transformed = grid:TransformLocally(targetNode, localNode, mainNode)
-    print(transformed) -- Vector2.new(2, -1)
+	local transformed = grid:TransformLocally(targetNode, localNode, mainNode)
+	print(transformed) -- Vector2.new(2, -1)
 	```
 ]=]
 function Grid.TransformLocally(self: Grid, targetNode: Vector2, localNode: Vector2, mainNode: Vector2): Vector2
@@ -407,58 +483,84 @@ function Grid.TransformLocally(self: Grid, targetNode: Vector2, localNode: Vecto
 end
 
 --[=[
-    @method Manhattan
-    @param a Vector2
-    @param b Vector2
-    @return number
-    Computes the Manhattan distance between two grid nodes.
+	@method RotateVector2
+	@param targetNode Vector2
+	@param rot number
+	@return Vector2?
+	Rotates a node in 90 degree increments clockwise
 
-    ```lua
-    local a = Vector2.new(0, 0)
-    local b = Vector2.new(2, 3)
-    local distance = grid:Manhattan(a, b)
-    print(distance) -- 5
-    ```
+	```lua
+	local node = Vector2.new(2, 2)
+
+	local rotated = grid:RotateVector2(node, 2)
+	print(rotated) -- Vector2.new(-2, -2)
+	```
+]=]
+function Grid.RotateVector2(self: Grid, node: Vector2, rot: number): Vector2
+	rot = rot % 4
+	
+	if rot == 0 then
+		return node
+	elseif rot == 1 then -- 90 CW
+		return Vector2.new(-node.Y, node.X)
+	elseif rot == 2 then -- 180
+		return Vector2.new(-node.X, -node.Y)
+	elseif rot == 3 then -- 270 CW
+		return Vector2.new(node.Y, -node.X)
+	end
+	
+	return (nil :: any)
+end
+
+--[=[
+	@method Manhattan
+	@param a Vector2
+	@param b Vector2
+	@return number
+	Computes the Manhattan distance between two grid nodes.
+
+	```lua
+	local a = Vector2.new(0, 0)
+	local b = Vector2.new(2, 3)
+	local distance = grid:Manhattan(a, b)
+	print(distance) -- 5
+	```
 ]=]
 function Grid.Manhattan(self: Grid, a: Vector2, b: Vector2)
 	return math.abs(a.X - b.X) + math.abs(a.Y - b.Y)
 end
 
 --[=[
-    @method AStar
-    @param start Vector2
-    @param goal Vector2
-    @return { Vector2 }?
-    Computes a path from `start` to `goal` using the A* pathfinding algorithm.
-    Returns an ordered list of grid nodes forming the path, or nil if no path exists.
+	@method AStar
+	@param start Vector2
+	@param goal Vector2
+	@return { Vector2 }?
+	Computes a path from `start` to `goal` using the A* pathfinding algorithm.
+	Returns an ordered list of grid nodes forming the path, or nil if no path exists.
 
-    ```lua
-    local start = Vector2.new(0, 0)
-    local goal = Vector2.new(2, 2)
-    local path = grid:AStar(start, goal)
+	```lua
+	local start = Vector2.new(0, 0)
+	local goal = Vector2.new(2, 2)
+	local path = grid:AStar(start, goal)
 
-    if path then
-        for _, node in path do
-            print(node)
-        end
-    else
-        print("No path found")
-    end
-    ```
+	if path then
+		for _, node in path do
+			print(node)
+		end
+	else
+		print("No path found")
+	end
+	```
 ]=]
 function Grid.AStar(self: Grid, start: Vector2, goal: Vector2): { Vector2 }?
 	if not self:IsInBounds(start) or not self:IsInBounds(goal) then
 		warn("[Grid.AStar] Start or goal node is out of bounds")
 		return nil
 	end
-	if self:IsOccupied(start) or self:IsOccupied(goal) then
-		warn("[Grid.AStar] Start or goal node is occupied")
-		return nil
-	end
 
 	local openSet = Heap.new()
 	openSet:Push(start, 0)
-	
+
 	local cameFrom = {}
 	local gScore = { [self:GetKey(start)] = 0 }
 	local fScore = { [self:GetKey(start)] = self:Manhattan(start, goal) }
@@ -507,7 +609,7 @@ function Grid.AStar(self: Grid, start: Vector2, goal: Vector2): { Vector2 }?
 					cameFrom[neighborKey] = currentKey
 					gScore[neighborKey] = tentativeG
 					fScore[neighborKey] = tentativeG + self:Manhattan(neighbor, goal)
-					
+
 					openSet:Push(neighbor, fScore[neighborKey])
 				end
 			end
@@ -518,22 +620,22 @@ function Grid.AStar(self: Grid, start: Vector2, goal: Vector2): { Vector2 }?
 end
 
 --[=[
-    @method NodesInRadius
-    @param center Vector2
-    @param radius number
-    @param clampToBounds boolean?
-    @return { Vector2 }
-    Returns all grid nodes within a circular radius from a center node.
+	@method NodesInRadius
+	@param center Vector2
+	@param radius number
+	@param clampToBounds boolean?
+	@return { Vector2 }
+	Returns all grid nodes within a circular radius from a center node.
 
-    ```lua
-    local center = Vector2.new(1, 1)
-    local radius = 2
-    local nodes = grid:NodesInRadius(center, radius, true)
+	```lua
+	local center = Vector2.new(1, 1)
+	local radius = 2
+	local nodes = grid:NodesInRadius(center, radius, true)
 
-    for _, node in nodes do
-        print(node)
-    end
-    ```
+	for _, node in nodes do
+		print(node)
+	end
+	```
 ]=]
 function Grid.NodesInRadius(self: Grid, center: Vector2, radius: number, clampToBounds: boolean?): { Vector2 }
 	local nodes = {}
@@ -546,7 +648,7 @@ function Grid.NodesInRadius(self: Grid, center: Vector2, radius: number, clampTo
 			if (not clampToBounds or self:IsInBounds(candidate)) then
 				local dx = candidate.X - center.X
 				local dy = candidate.Y - center.Y
-				
+
 				if dx * dx + dy * dy <= rSq then
 					table.insert(nodes, candidate)
 				end
@@ -558,10 +660,10 @@ function Grid.NodesInRadius(self: Grid, center: Vector2, radius: number, clampTo
 end
 
 --[=[
-    @method WorldToGrid
-    @param worldPos Vector3
-    @return Vector2
-    Converts a world position into a grid node
+	@method WorldToGrid
+	@param worldPos Vector3
+	@return Vector2
+	Converts a world position into a grid node
 
 	```lua
 	local worldPosition = Vector3.new(0, 0, 0)
@@ -578,10 +680,10 @@ function Grid.WorldToGrid(self: Grid, worldPos: Vector3): Vector2
 end
 
 --[=[
-    @method GridToWorld
-    @param node Vector2
-    @return Vector3
-    Converts a grid node to world-space Vector3.
+	@method GridToWorld
+	@param node Vector2
+	@return Vector3
+	Converts a grid node to world-space Vector3.
 
 	```lua
 	local node = Vector2.new(0, 1)
@@ -598,11 +700,11 @@ function Grid.GridToWorld(self: Grid, node: Vector2): Vector3
 end
 
 --[=[
-    @method BatchCall
+	@method BatchCall
 	@param fn string
 	@param nodes { Vector2 }
 	@param ... any
-    Calls a method on the object for each node in a list, passing any extra arguments.
+	Calls a method on the object for each node in a list, passing any extra arguments.
 
 	```lua
 	local nodes = {
@@ -613,25 +715,59 @@ end
 	grid:BatchCall("TransformLocally", nodes, Vector2.new(0, 0), Vector.new(0, 0))
 	```
 ]=]
-function Grid.BatchCall(self: Grid, fn: string, nodes: { Vector2 }, ...)
+function Grid.BatchCall(self: Grid, fn: string, nodes: { Vector2 }, ...): { any }?
 	local method = self[fn]
-	if not method or typeof(method) ~= "function" then return end
+	assert(type(method) == "function", ("Grid has no method called '%s'"):format(fn))
 
+	local list = {}
+	
 	local args = {...}
 	for _, node in nodes do
-		local s, err = pcall(function()
+		local s, ret = pcall(function()
 			method(self, node, table.unpack(args))
 		end)
 
 		if not s then
-			warn(("[Grid.BatchCall] Error calling %s for node %s: %s"):format(fn, self:GetKey(node), tostring(err)))
+			warn(("[Grid.BatchCall] Error calling %s for node %s: %s"):format(fn, self:GetKey(node), tostring(ret)))
+		else
+			table.insert(list, ret)
 		end
 	end
+	
+	return list
 end
 
 --[=[
-    @method Build
-    Draws the grid in world space
+	@method BatchCheck
+	@param nodes { Vector2 }
+	@param fn string
+	@return boolean
+	Calls the specified boolean method on each node. Returns true if all nodes return true.
+	
+	```lua
+	local nodes = { Vector2.new(0, 0), Vector2.new(1, 1) }
+
+	if grid:BatchCheck(nodes, "IsInBounds") then
+		print("all in bounds")
+	end
+	```
+]=]
+function Grid.BatchCheck(self: Grid, fn: CheckMethod, nodes: {Vector2}): boolean
+	local method = self[fn]
+	assert(type(method) == "function", ("Grid has no method called '%s'"):format(fn))
+
+	for _, node in nodes do
+		if not method(self, node) then
+			return false
+		end
+	end
+	
+	return true
+end
+
+--[=[
+	@method Build
+	Draws the grid in world space
 
 	```lua
 	grid:Build()
@@ -663,7 +799,7 @@ function Grid.Build(self: Grid)
 			if self.StateColors then
 				local state = self.Occupied[self:GetKey(node)] or 0
 				local color = self.StateColors[state]
-				
+
 				if color then
 					cell.Color = color
 				end
@@ -677,8 +813,8 @@ function Grid.Build(self: Grid)
 end
 
 --[=[
-    @method Clean
-    Cleans the grid from the world
+	@method Clean
+	Cleans the grid from the world
 
 	```lua
 	grid:Clean()
@@ -693,8 +829,8 @@ function Grid.Clean(self: Grid)
 end
 
 --[=[
-    @method Destroy
-    Cleans the grid and trove
+	@method Destroy
+	Cleans the grid and trove
 
 	```lua
 	grid:Destroy()
@@ -706,5 +842,13 @@ function Grid.Destroy(self: Grid)
 end
 
 return {
+	RecursiveReverseXY = recursiveReverseXY,
+	RecursiveConvertDirection = recursiveConvertDirection,
+	
+	Directions = DIRECTIONS,
+	RotationMap = ROTATION_MAP,
+	DirectionMap = DIRECTION_MAP,
+	WorldCellOffset = WORLD_CELL_OFFSET,
+	
 	new = Grid.new
 }
