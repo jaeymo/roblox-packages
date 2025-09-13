@@ -3,7 +3,7 @@
 --[[
 	Grid: A module for 2D grid math
 	Author: jaeymo
-	Version: 1.0.0
+	Version: 1.0.1
 	License: MIT
 	Created: 09/13/2025
 	
@@ -33,7 +33,7 @@ local WORLD_CELL_PROPERTIES = {
 
 type GridProperties = {
 	StateColors: { [number]: Color3 },
-	Occupied: { [string]: number }, -- vec2: state
+	Occupied: { [string]: number? }, -- vec2: state
 	GridActive: boolean,
 	PivotNode: Vector2,
 	Trove: Trove.Trove,
