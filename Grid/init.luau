@@ -3,7 +3,7 @@
 --[[
 	Grid: A module for 2D grid math
 	Author: jaeymo
-	Version: 2.0.0
+	Version: 2.1.0
 	License: MIT
 	Created: 09/13/2025
 	
@@ -20,9 +20,9 @@ Grid.__index = Grid
 local Trove = require(script.Parent["trove"])
 local Heap = require(script.Parent["heap"])
 
-local DIRECTIONS = {Vector2.new(1,0), Vector2.new(-1,0), Vector2.new(0,1), Vector2.new(0,-1)}
+local DIRECTIONS = { Vector2.new(1,0), Vector2.new(-1,0), Vector2.new(0,1), Vector2.new(0,-1) }
 local DIRECTION_MAP = { ["Up"] = Vector2.new(1, 0), ["Down"] = Vector2.new(-1, 0), ["Right"] = Vector2.new(0, 1), ["Left"] = Vector2.new(0, -1), }
-local ROTATION_MAP = { [1] = 90, [2] = 180, [3] = 270, [4] = 0 }
+local ROTATION_MAP = { [1] = 90, [2] = 0, [3] = 270, [4] = 180, }
 
 local WORLD_CELL_OFFSET = Vector3.new(0, -5, 0)
 local WORLD_CELL_PROPERTIES = {
@@ -115,11 +115,11 @@ function Grid.new(width: number, height: number, cellSize: number, pivot: CFrame
 	self.PivotNode = Vector2.new(0, 0)
 	self.Pivot = pivot or CFrame.new()
 	self.CellSize = cellSize
+	self.Trove = Trove.new()
 	self.GridActive = false
 	self.Height = height
 	self.Width = width
 	self.Occupied = {}
-	self.Trove = Trove.new()
 
 	self._cellBase = createWorldCell(cellSize)
 	self._visualizerInstance = Instance.new("Folder")
@@ -443,7 +443,7 @@ end
 	```
 ]=]
 function Grid.TransformRotationally(self: Grid, targetNode: Vector2, mainNode: Vector2, rot: number): Vector2
-	local x, y, px, py = mainNode.X, mainNode.Y, targetNode.X, targetNode.Y
+	local x, y, px, py = targetNode.X, targetNode.Y, mainNode.X, mainNode.Y
 	local k = rot
 
 	k = ((k % 4) + 4) % 4
@@ -720,12 +720,10 @@ function Grid.BatchCall(self: Grid, fn: string, nodes: { Vector2 }, ...): { any 
 	assert(type(method) == "function", ("Grid has no method called '%s'"):format(fn))
 
 	local list = {}
-	
-	local args = {...}
+	local args = { ... }
+
 	for _, node in nodes do
-		local s, ret = pcall(function()
-			method(self, node, table.unpack(args))
-		end)
+		local s, ret = pcall(method, self, node, table.unpack(args))
 
 		if not s then
 			warn(("[Grid.BatchCall] Error calling %s for node %s: %s"):format(fn, self:GetKey(node), tostring(ret)))
@@ -733,7 +731,7 @@ function Grid.BatchCall(self: Grid, fn: string, nodes: { Vector2 }, ...): { any 
 			table.insert(list, ret)
 		end
 	end
-	
+
 	return list
 end
 
