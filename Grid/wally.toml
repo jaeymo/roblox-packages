@@ -1,0 +1,11 @@
+[package]
+name = "jaeymo/grid"
+description = "A module for 2D grid math"
+license = "MIT"
+version = "1.0.0"
+registry = "https://github.com/UpliftGames/wally-index"
+realm = "shared"
+
+[dependencies]
+trove = "sleitnick/trove@1.5.1"
+heap = "jaeymo/heap@1.0.0"
