@@ -3,7 +3,7 @@
 --[[
 	Wrapper: Manages instantiating objects from tagged Instances
 	Author: jaeymo
-	Version: 0.2.9
+	Version: 0.3.0
 	License: MIT
 	Created: 09/06/2025
 	
@@ -342,9 +342,6 @@ function Wrapper.Destroy<T>(self: Wrapper<T>)
 	end
 	
 	self.Trove:Destroy()
-	
-	table.clear(self :: any)
-	setmetatable(self :: any, nil)
 end
 
 function Wrapper._watch<T>(self: Wrapper<T>)
