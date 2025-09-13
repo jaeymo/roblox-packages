@@ -1,0 +1,7 @@
+[package]
+name = "jaeymo/heap"
+description = "A binary min-heap implementation"
+license = "MIT"
+version = "1.0.0"
+registry = "https://github.com/UpliftGames/wally-index"
+realm = "shared"
