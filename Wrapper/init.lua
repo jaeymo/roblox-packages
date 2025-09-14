@@ -3,12 +3,13 @@
 --[[
 	Wrapper: Manages instantiating objects from tagged Instances
 	Author: jaeymo
-	Version: 0.4.0
+	Version: 0.5.0
 	License: MIT
 	Created: 09/06/2025
 	
 	For issues or feedback message `jaeymo` on Discord!
 ]]
+	
 local GeneralUtil = require(script.Parent["general-util"])
 local Viewer = require(script.Parent["viewer"])
 local Trove = require(script.Parent["trove"])
@@ -57,20 +58,20 @@ export type Options =
 	Resolver: ((instance: Instance) -> Class<any>)?,
 }
 
-export type Trove = Trove.Trove
+export type Trove = typeof(Trove.new())
 
 export type Class<T> = {
 	__index: any,
-	new: (inst: Instance, trove: Trove.Trove, guid: string?) -> T,
+	new: (inst: Instance, trove: Trove, guid: string?) -> T,
 }
 
 type WrapperProperties<T> = {
-	Trove: Trove.Trove,
+	Trove: Trove,
 	Options: Options,
 	Tag: string,
 	Class: Class<T>?,
 
-	ObjectTroves: { [Instance]: Trove.Trove },
+	ObjectTroves: { [Instance]: Trove },
 	Objects: { [Instance]: T },
 	IdMap: { [string]: Instance },
 	
