@@ -3,7 +3,7 @@
 --[[
 	Wrapper: Manages instantiating objects from tagged Instances
 	Author: jaeymo
-	Version: 0.3.0
+	Version: 0.4.0
 	License: MIT
 	Created: 09/06/2025
 	
@@ -39,9 +39,6 @@ local DEFAULT_OPTIONS =
 local Wrapper = {}
 Wrapper.__index = Wrapper
 
-Wrapper.__call = function(_, ...)
-	return Wrapper.new(...)
-end
 
 export type Options = 
 {
@@ -50,7 +47,7 @@ export type Options =
 		Startup: string,
 		Destroy: string,
 		Constructor: string,
-	},
+	}?,
 	Context: any?,
 	GUID: string?,
 	Logging: boolean?,
@@ -109,9 +106,11 @@ function Wrapper.new<T>(class: Class<T>?, tag: string, options: Options?): Wrapp
 	properties.IdMap = {}
 	
 	-- if there is a startup method, we will pass this wrapper object and the context to that func
-	local startup = properties.Options.Methods.Startup
+	local methods = properties.Options.Methods
+	local startup = methods and methods.Startup
 	local context = properties.Options.Context
-	local dbg = properties.Options.Debug
+	local dbg = properties.Options.Debug :: boolean
+	
 	if startup then
 		GeneralUtil.DebugSafecall(class, startup, dbg, properties, context)
 	end
@@ -184,7 +183,7 @@ end
 	```
 ]=]
 function Wrapper.Call<T>(self: Wrapper<T>, object: T, fn: string, ...: any)
-	return GeneralUtil.DebugSafecall(object, fn, self.Options.Debug, ...)
+	return GeneralUtil.DebugSafecall(object, fn, self.Options.Debug or DEFAULT_OPTIONS.Debug, ...)
 end
 
 --[=[
@@ -241,7 +240,8 @@ function Wrapper.Apply<T>(self: Wrapper<T>, inst: Instance): T?
 		return nil
 	end
 	
-	local constructor = self.Options.Methods.Constructor or DEFAULT_OPTIONS.Methods.Constructor
+	local methods = self.Options.Methods
+	local constructor = methods and methods.Constructor or DEFAULT_OPTIONS.Methods.Constructor
 	local s, object = pcall(class[constructor], inst, objectTrove, guid)
 	if not s then
 		objectTrove:Destroy()
@@ -262,7 +262,7 @@ function Wrapper.Apply<T>(self: Wrapper<T>, inst: Instance): T?
 	self.ObjectTroves[inst] = objectTrove
 	
 	if self.Options.AutoInit then
-		local init = self.Options.Methods.Init or DEFAULT_OPTIONS.Methods.Init
+		local init = methods and methods.Init or DEFAULT_OPTIONS.Methods.Init
 		local dbg = self.Options.Debug or DEFAULT_OPTIONS.Debug
 		GeneralUtil.DebugSafecall(object, init, dbg)
 	end
@@ -312,7 +312,8 @@ function Wrapper.Revoke<T>(self: Wrapper<T>, inst: Instance)
 	
 	local object = self.Objects[inst]
 	if object then
-		local destroy = self.Options.Methods.Destroy or DEFAULT_OPTIONS.Methods.Destroy
+		local methods = self.Options.Methods
+		local destroy = methods and methods.Destroy or DEFAULT_OPTIONS.Methods.Destroy
 		local dbg = self.Options.Debug or DEFAULT_OPTIONS.Debug
 		GeneralUtil.DebugSafecall(object, destroy, dbg)
 
@@ -355,6 +356,10 @@ function Wrapper._watch<T>(self: Wrapper<T>)
 	self.Trove:Add(Viewer.WatchTag(self.Tag, true, function(inst: Instance)
 		self:Revoke(inst)
 	end))
+end
+
+Wrapper.__call = function(_, ...)
+	return Wrapper.new(...)
 end
 
 return Wrapper
