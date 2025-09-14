@@ -3,7 +3,7 @@
 --[[
 	Grid: A module for 2D grid math
 	Author: jaeymo
-	Version: 2.1.0
+	Version: 2.2.0
 	License: MIT
 	Created: 09/13/2025
 	
@@ -33,18 +33,20 @@ local WORLD_CELL_PROPERTIES = {
 	Anchored = true,
 }
 
+type Trove = typeof(Trove.new())
 type CheckMethod = "IsAvailable" | "IsInBounds" | "IsOccupied" | "CanConnectToAny"
+type MSTEntry = { cost: number, path: { Vector2 }, u: number, v: number}
 
 type GridProperties = {
 	StateColors: { [number]: Color3 },
 	Occupied: { [string]: number? }, -- vec2: state
 	GridActive: boolean,
 	PivotNode: Vector2,
-	Trove: Trove.Trove,
 	CellSize: number,
 	Height: number,
 	Width: number,
 	Pivot: CFrame,
+	Trove: Trove,
 
 	_cellBase: BasePart,
 	_visualizerInstance: Folder,
@@ -617,6 +619,56 @@ function Grid.AStar(self: Grid, start: Vector2, goal: Vector2): { Vector2 }?
 	end
 
 	return nil
+end
+
+--[=[
+	@method MST
+	@param nodes { Vector2 }
+	@return { MSTEntry }
+	Builds a Minimum Spanning Tree over the given set of nodes using A* paths as edge costs.
+
+	```lua
+	local nodes = {
+		Vector2.new(0, 0),
+		Vector2.new(2, 2),
+		Vector2.new(4, 4),
+	}
+
+	local mst = grid:MST(nodes)
+
+	for _, edge in mst do
+		print(("Edge from %d to %d with cost %d"):format(edge.u, edge.v, edge.cost))
+	end
+	```
+]=]
+function Grid.MST(self: Grid, nodes: { Vector2 } ): { MSTEntry }
+	local graph = {}
+
+	for i = 1, #nodes do
+		for j = i+1, #nodes do
+			local path = self:AStar(nodes[i], nodes[j])
+			if not path then continue end
+
+			table.insert(graph, {u = i, v = j, cost = #path - 1, path = path})
+		end
+	end
+
+	table.sort(graph, function(a, b) return a.cost < b.cost end)
+
+	local parent = {}
+	for i = 1, #nodes do parent[i] = i end
+	local function find(x) if parent[x] ~= x then parent[x] = find(parent[x]) end return parent[x] end
+	local function union(x, y) parent[find(x)] = find(y) end
+
+	local mst = {}
+	for _, edge in graph do
+		if find(edge.u) ~= find(edge.v) then
+			union(edge.u, edge.v)
+			table.insert(mst, edge)
+		end
+	end
+	
+	return mst
 end
 
 --[=[

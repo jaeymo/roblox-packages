@@ -4,7 +4,7 @@ registry = "test"
 
 [[package]]
 name = "jaeymo/grid"
-version = "0.1.0"
+version = "2.2.0"
 dependencies = [["heap", "jaeymo/heap@1.0.0"], ["trove", "sleitnick/trove@1.5.1"]]
 
 [[package]]
