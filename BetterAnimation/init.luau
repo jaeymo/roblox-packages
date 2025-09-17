@@ -3,7 +3,7 @@
 --[[
 	BetterAnimation: A module to make handling client-animations easier
 	Author: jaeymo
-	Version: 0.1.0
+	Version: 1.0.0
 	License: MIT
 	Created: 09/06/2025
 
@@ -11,7 +11,6 @@
 ]]
 
 type AnimationMetadata = { fadeTime: number?, weight: number?, speed: number?,  }
-
 type AnimationDataInList = { id: number, fadeTime: number?, weight: number?, speed: number? }
 type AnimationList = { [string]: AnimationDataInList }
 type Loaded = { [string]: {track: AnimationTrack, metadata: AnimationMetadata } }
