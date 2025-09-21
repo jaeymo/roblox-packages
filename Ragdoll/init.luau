@@ -3,7 +3,7 @@
 --[[
 	Ragdoll: Handles R6 ragdoll mechanics
 	Author: jaeymo
-	Version: 1.0.2
+	Version: 1.5.0
 	License: MIT
 	Created: 09/20/2025
 	
@@ -13,7 +13,6 @@
     DanCodes is the original author of this module, I have just repurposed
     it to be available through Wally.
 ]]
-
 
 local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
@@ -39,19 +38,23 @@ local timers: { [Model]: Timer } = {}
 local jointCache: { [Model]: { Motor6D } } = {}
 
 local function clearCache(rig: Model)
-    jointCache[rig] = nil
+	jointCache[rig] = nil
 end
 
 local function cleanup(rig: Model)
-    local timer: Timer = timers[rig]
-    if not timer then return end
+	local timerData = timers[rig]
 
-    local status = coroutine.status(timer.Thread)
-    if status ~= "dead" and status ~= "running" then
-        task.cancel(timer.Thread)
-    end
+	if not timerData then
+		return
+	end
 
-    timers[rig] = nil
+	local status = coroutine.status(timerData.Thread)
+	
+	if status ~= "dead" and status ~= "running" then
+		task.cancel(timerData.Thread)
+	end
+	
+	timers[rig] = nil
 end
 
 local function destroyJoints(rig: Model)
@@ -63,9 +66,9 @@ local function destroyJoints(rig: Model)
 end
 
 local function toggleJoints(rig: Model, enable: boolean)
-    for _, motor6d: Motor6D in jointCache[rig] do
-        motor6d.Enabled = enable
-    end
+	for _, motor6d in jointCache[rig] do
+		motor6d.Enabled = enable
+	end
 end
 
 local function verifyRig(rig: Model): (Humanoid, BasePart)
@@ -116,53 +119,59 @@ end
 	```
 ]=]
 function Ragdoll.Setup(rig: Model)
-    local humanoid, _ = verifyRig(rig)
+	local humanoid, _ = verifyRig(rig)
 
-    humanoid.BreakJointsOnDeath = false
-    humanoid.RequiresNeck = false
-    rig:AddTag(Ragdoll.Tags.Ragdoll)
+	humanoid.BreakJointsOnDeath = false
+	humanoid.RequiresNeck = false
+	rig:AddTag(Ragdoll.Tags.Ragdoll)
 
-    local joints = {}
-    local jointsFolder = rig:FindFirstChild("RagdollJoints")
+	-- Setting up ragdoll joints
+	local joints = {}
+	local jointsFolder = rig:FindFirstChild("RagdollJoints")
+	
+	for _, motor6d in rig:GetDescendants() do
+		if not motor6d:IsA("Motor6D") then
+			continue
+		end
 
-    for _, motor6d in rig:GetDescendants() do
-        if not motor6d:IsA("Motor6D") then continue end
+		local isValid = Blueprint.socketSettings[motor6d.Name]
 
-        local isValid = Blueprint.SocketSettings[motor6d.Name]
-        if not isValid then continue end
-        
-        table.insert(joints, motor6d)
-    end
-
-    if not jointsFolder then
-        local folder = Instance.new("Folder")
-        folder.Name = "RagdollJoints"
-
-        for _, joint in joints do
-            createRagdollJoint(joint, folder)
-        end
-
-        folder.Parent = rig
-    end
-
-    jointCache[rig] = joints
-    
-    local connection: RBXScriptConnection
-    connection = rig.AncestryChanged:Connect(function( )
-        if not rig:IsDescendantOf(game) then
-            destroyJoints(rig)
-            cleanup(rig)
-        end
-    end)
-    
-    humanoid.Died:Once(function()
-        if connection then
-            connection:Disconnect()
-        end
-
-        Ragdoll.Ragdoll(rig)
-        destroyJoints(rig)
-    end)
+		if not isValid then
+			continue
+		end
+		
+		table.insert(joints, motor6d)
+	end
+	
+	if not jointsFolder then
+		local folder = Instance.new("Folder")
+		folder.Name = "RagdollJoints"
+		
+		for _, joint in joints do
+			createRagdollJoint(joint, folder)
+		end
+		
+		folder.Parent = rig
+	end
+	
+	jointCache[rig] = joints
+	
+	local connection: RBXScriptConnection
+	connection = rig.AncestryChanged:Connect(function()
+		if not rig:IsDescendantOf(game) then
+			destroyJoints(rig)
+			cleanup(rig)
+		end
+	end)
+	
+	humanoid.Died:Once(function()
+		if connection.Connected then
+			connection:Disconnect()
+		end
+		
+		Ragdoll.Ragdoll(rig)
+		destroyJoints(rig)
+	end)
 end
 
 --[=[
@@ -177,7 +186,7 @@ end
 	```
 ]=]
 function Ragdoll.IsRagdolled(rig: Model)
-    return rig:HasTag(Ragdoll.Tags.Ragdolled)
+	return rig:HasTag(Ragdoll.Tags.Ragdolled)
 end
 
 --[=[
@@ -222,6 +231,8 @@ function Ragdoll.Ragdoll(rig: Model, duration: number?)
 		end
 	end	
 	
+	local data = timers[rig]
+	
 	timers[rig] = {
 		EndTime = endTime,
 		Thread = task.delay(duration, function()
@@ -265,5 +276,16 @@ Players.PlayerRemoving:Connect(function(player)
 		cleanup(rig)
 	end
 end)
+
+function Ragdoll:Boostrap()
+	if IS_CLIENT then
+		local RagdollClient = require(script.Handlers.RagdollClient)
+		RagdollClient:OnStart(self)
+	else
+		local RagdollServer = require(script.Handlers.RagdollServer)
+		RagdollServer:OnStart(self)
+	end
+end
+Ragdoll:Boostrap()
 
 return Ragdoll

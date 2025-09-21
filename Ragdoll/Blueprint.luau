@@ -22,9 +22,8 @@ export type SocketSettings = {
 }
 
 local R6RagdollBlueprint = {
-	NumberLimbs = 6, -- number of constraints created on an R6 Rig, this number was tested for
-	
-    SocketSettings = {
+	numLimbs = 6, -- number of constraints created on an R6 Rig, this number was tested for
+	socketSettings = {
 		Neck = { MaxFrictionTorque = 150, UpperAngle = 45, TwistLowerAngle = -30, TwistUpperAngle = 30 },
 		RootJoint = { MaxFrictionTorque = 50, UpperAngle = 20, TwistLowerAngle = 0, TwistUpperAngle = 30 },
 		["Right Shoulder"] = ARM_SOCKET_SETTINGS,
@@ -32,8 +31,7 @@ local R6RagdollBlueprint = {
 		["Right Hip"] = LEG_SOCKET_SETTINGS,
 		["Left Hip"] = LEG_SOCKET_SETTINGS,
 	} :: {[string]: SocketSettings},
-
-	CFrameOverrides = {
+	cframeOverrides = {
 		["Right Shoulder"] = { C0 = RIGHT_SHOULDER_ATTACHMENT_CFRAME0, C1 = RIGHT_SHOULDER_ATTACHMENT_CFRAME1 },
 		["Left Shoulder"] = { C0 = LEFT_SHOULDER_ATTACHMENT_CFRAME0, C1 = LEFT_SHOULDER_ATTACHMENT_CFRAME1 },
 		["Right Hip"] = { C0 = RIGHT_HIP_ATTACHMENT_CFRAME0, C1 = HIP_ATTACHMENT_CFRAME1 },
