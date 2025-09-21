@@ -3,7 +3,7 @@
 --[[
 	Ragdoll: Handles R6 ragdoll mechanics
 	Author: jaeymo
-	Version: 1.0.0
+	Version: 1.0.1
 	License: MIT
 	Created: 09/20/2025
 	

@@ -1,6 +1,6 @@
 [package]
 name = "jaeymo/ragdoll"
-version = "1.0.0"
+version = "1.0.1"
 license = "MIT"
 description = "Handles R6 ragdoll mechanics"
 registry = "https://github.com/UpliftGames/wally-index"
