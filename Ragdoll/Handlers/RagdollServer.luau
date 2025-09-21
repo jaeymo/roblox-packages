@@ -2,8 +2,12 @@
 local Players = game:GetService("Players")
 
 local RagdollServer = {}
+RagdollServer.IsActive = false
 
 function RagdollServer:OnStart(Ragdoll: any)
+	if RagdollServer.IsActive then return end
+	RagdollServer.IsActive = true
+	
 	local function safePlayerAdded(callback: (Player) -> ())
 		for _, player in Players:GetPlayers() do
 			callback(player)
@@ -14,7 +18,6 @@ function RagdollServer:OnStart(Ragdoll: any)
 
 	safePlayerAdded(function(player)
 		player.CharacterAdded:Connect(function(character)
-			print("SETUP!", character)
 			Ragdoll.Setup(character)
 		end)
 	end)

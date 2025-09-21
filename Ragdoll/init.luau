@@ -3,7 +3,7 @@
 --[[
 	Ragdoll: Handles R6 ragdoll mechanics
 	Author: jaeymo
-	Version: 1.5.0
+	Version: 1.6.0
 	License: MIT
 	Created: 09/20/2025
 	
@@ -125,7 +125,6 @@ function Ragdoll.Setup(rig: Model)
 	humanoid.RequiresNeck = false
 	rig:AddTag(Ragdoll.Tags.Ragdoll)
 
-	-- Setting up ragdoll joints
 	local joints = {}
 	local jointsFolder = rig:FindFirstChild("RagdollJoints")
 	

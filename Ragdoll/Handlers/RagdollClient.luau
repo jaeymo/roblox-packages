@@ -3,8 +3,12 @@ local CollectionService = game:GetService("CollectionService")
 local Players = game:GetService("Players")
 
 local RagdollClient = {}
+RagdollClient.IsActive = false
 
 function RagdollClient:OnStart(Ragdoll: any)
+	if RagdollClient.IsActive then return end
+	RagdollClient.IsActive = true
+
 	local player = Players.LocalPlayer
 
 	local function startRagdoll(rig: Model)
