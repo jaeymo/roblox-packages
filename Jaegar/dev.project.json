@@ -1,0 +1,34 @@
+{
+  "name": "jaegar",
+  "servePlaceIds": [
+    104082384435793
+  ],
+  
+  "tree": {
+    "$className": "DataModel",
+
+    "ReplicatedStorage": {
+      "jaegar": {
+        "$path": "lib"
+      },
+
+      "Packages": {
+        "$path": "Packages"
+      }
+    },
+
+    "ServerScriptService": {
+      "Server": {
+        "$path": "test/Server"
+      }
+    },
+
+    "StarterPlayer": {
+      "StarterPlayerScripts": {
+        "Client": {
+          "$path": "test/Client"
+        }
+      }
+    }
+  }
+}
