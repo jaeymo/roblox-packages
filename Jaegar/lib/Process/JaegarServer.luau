@@ -5,8 +5,10 @@ local Registries = script.Parent.Parent.Registries
 
 local Promise = require(ReplicatedStorage.Packages.Promise)
 local ImportRegistry = require(Registries.ImportRegistry)
+local Shared = require(script.Parent.Shared)
 
 local JaegarServer = {}
+setmetatable(JaegarServer, {__index = Shared})
 
 local Initialized = false
 
@@ -20,7 +22,7 @@ function JaegarServer:Start(BootstrapLocation: Instance | { Instance } )
     end):andThen(function()
         ImportRegistry:Prepare()
     end):catch(function(err)
-        warn(`[{script.Name}] Failed to start: {err}`)
+        warn(`[{script.Name}] Error on startup: {err}`)
     end)
 end
 

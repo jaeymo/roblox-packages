@@ -5,8 +5,10 @@ local Registries = script.Parent.Parent.Registries
 
 local Promise = require(ReplicatedStorage.Packages.Promise)
 local ImportRegistry = require(Registries.ImportRegistry)
+local Shared = require(script.Parent.Shared)
 
 local JaegarClient = {}
+setmetatable(JaegarClient, {__index = Shared})
 
 local Initialized = false
 

@@ -1,6 +1,8 @@
 --!strict
 local Jaegar = script.Parent.Parent
 
+type ImportType = "Client" | "Server"
+
 local ImportRegistry = {
     CachedImports = {},
     Controllers = {},
@@ -36,7 +38,7 @@ local function Request(Container: Instance)
     end
 end
 
-local function GetStorageLocation(ImportType: string): { [string]: any }
+local function GetStorageLocation(ImportType: ImportType): { [string]: any }
     return (ImportType == "Service" and ImportRegistry.Services) or ImportRegistry.Controllers
 end
 
@@ -57,7 +59,7 @@ function ImportRegistry:Bootstrap(Directories: Instance | { Instance } )
     end
 end
 
-function ImportRegistry:Create(ImportType: string, Identifier: string, Import: any): any
+function ImportRegistry:Create(ImportType: ImportType, Identifier: string, Import: any): any
     if not Verify(Import) then
         error(`[{script.Name}] Invalid import type: {Identifier}`)
     end
@@ -72,7 +74,7 @@ function ImportRegistry:Create(ImportType: string, Identifier: string, Import: a
     return Import
 end
 
-function ImportRegistry:Catch(ImportType: string, Identifier: string): any
+function ImportRegistry:Catch(ImportType: ImportType, Identifier: string): any
     local StorageLocation = GetStorageLocation(ImportType)
     if not StorageLocation[Identifier] then
         warn(`[{script.Name}] Import has not been registered: {Identifier}`)

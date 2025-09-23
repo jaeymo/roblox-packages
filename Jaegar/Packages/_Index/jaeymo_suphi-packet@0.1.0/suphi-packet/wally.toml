@@ -1,0 +1,7 @@
+[package]
+name = "jaeymo/suphi-packet"
+version = "0.1.0"
+description = "Wally version of suphi's network module"
+license = "MIT"
+registry = "https://github.com/UpliftGames/wally-index"
+realm = "shared"

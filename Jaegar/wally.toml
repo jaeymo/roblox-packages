@@ -8,3 +8,4 @@ realm = "shared"
 
 [dependencies]
 Promise = "evaera/promise@4.0.0"
+Packet = "jaeymo/suphi-packet@0.1.0"
