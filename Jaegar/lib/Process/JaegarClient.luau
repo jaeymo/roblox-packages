@@ -1,17 +1,37 @@
 --!strict
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Root = script.Parent.Parent
+local Registries = Root.Registries
 
-local Registries = script.Parent.Parent.Registries
-
-local Promise = require(ReplicatedStorage.Packages.Promise)
 local ImportRegistry = require(Registries.ImportRegistry)
 local Shared = require(script.Parent.Shared)
+local Promise = require(Root.Promise)
 
+--[=[
+	@class JaegarClient
+    Client-sided bootstrapper and manager for the Jaegar framework.
+]=]
 local JaegarClient = {}
 setmetatable(JaegarClient, {__index = Shared})
 
 local Initialized = false
 
+--[=[
+    @method Start
+    @within JaegarClient
+    @param BootstrapLocation Instance | { Instance }
+    Boots the client framework by loading all provided controllers
+    from the given location(s). Should only be called once.
+
+    ```lua
+    local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
+    local Shared = ReplicatedStorage.Shared
+    local Client = ReplicatedStorage.Client
+
+    local Locations = { Shared, Client }
+    Jaegar:Start(Locations)
+    ```
+]=]
 function JaegarClient:Start(BootstrapLocation: Instance | { Instance } )
     if Initialized then
         error(`[{script.Name}] Jaegar should only be started once per client`)
@@ -28,10 +48,42 @@ function JaegarClient:Start(BootstrapLocation: Instance | { Instance } )
     end)
 end
 
+--[=[
+    @method CreateController
+    @within JaegarClient
+    @param ControllerName string
+    @param Controller any
+    @return any
+    Registers a new controller with the given name and definition.
+
+    ```lua
+    local MyController = Jaegar:CreateController("MyController", {
+        Foo = 1,
+    })
+
+    function MyController:DoSomething()
+        print(MyController.Foo)
+    end
+
+    return MyController
+    ```
+]=]
 function JaegarClient:CreateController(ControllerName: string, Controller: any)
     return ImportRegistry:Create("Controller", ControllerName, Controller)
 end
 
+--[=[
+    @method GetController
+    @within JaegarClient
+    @param ControllerName string
+    @return any
+    Retrieves an existing controller by name, if it exists.
+
+    ```lua
+    local MyController = Jaegar:GetController("MyController")
+    MyController:DoSomething()
+    ```
+]=]
 function JaegarClient:GetController(ControllerName: string)
     return ImportRegistry:Catch("Controller", ControllerName)
 end

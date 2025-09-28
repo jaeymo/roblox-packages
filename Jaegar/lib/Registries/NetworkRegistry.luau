@@ -1,10 +1,11 @@
 --!strict
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local RunService = game:GetService("RunService")
 
-local IS_SERVER = RunService:IsServer()
+local Root = script.Parent.Parent
 
-local Packet = require(ReplicatedStorage.Packages.Packet)
+local Packet = require(Root.Packet)
+
+local IS_SERVER = RunService:IsServer()
 
 local NetworkRegistry = {}
 
@@ -41,7 +42,18 @@ function NetworkRegistry:SendClient(PacketName: string, Client: Player, ...: any
     Fetched:FireClient(Client, ...)
 end
 
-function NetworkRegistry:Send(PacketName: string, ...: any)
+function NetworkRegistry:SendServer(PacketName: string, ...: any)
+	if type(PacketName) ~= "string" then 
+		error(`[{script.Name}] PacketName is not a string, got: {type(PacketName)}`) 
+	end
+
+	local Fetched = NetworkRegistry:GetPacket(PacketName)
+	if not Fetched then return end
+
+	Fetched:Fire(...)
+end
+
+function NetworkRegistry:Broadcast(PacketName: string, ...: any)
     if type(PacketName) ~= "string" then 
         error(`[{script.Name}] PacketName is not a string, got: {type(PacketName)}`) 
     end
@@ -52,19 +64,33 @@ function NetworkRegistry:Send(PacketName: string, ...: any)
     Fetched:Fire(...)
 end
 
-function NetworkRegistry:On(PacketName: string, Callback: (any) -> any)
-    if type(PacketName) ~= "string" then 
-        error(`[{script.Name}] PacketName is not a string, got: {type(PacketName)}`) 
-    end
+function NetworkRegistry:OnInvoke(PacketName: string, Callback: (...any) -> any)
+	local Fetched = NetworkRegistry:GetPacket(PacketName)
+	if not Fetched then return end
 
-    local Fetched = NetworkRegistry:GetPacket(PacketName)
-    if not Fetched then return end
+	if IS_SERVER then
+		Fetched.OnServerInvoke = Callback
+	else
+		Fetched.OnClientInvoke = Callback
+	end
+end
 
-    if IS_SERVER then
-        return Fetched.OnServerEvent:Connect(Callback)
-    else
-        return Fetched.OnClientEvent:Connect(Callback)
-    end
+function NetworkRegistry:OnServer(PacketName: string, Callback: (Player, any) -> any)
+	local Fetched = NetworkRegistry:GetPacket(PacketName)
+	if not Fetched then return end
+    
+	assert(IS_SERVER, `[{script.Name}] OnServer called on client!`)
+
+	return Fetched.OnServerEvent:Connect(Callback)
+end
+
+function NetworkRegistry:OnClient(PacketName: string, Callback: (any) -> any)
+	local Fetched = NetworkRegistry:GetPacket(PacketName)
+	if not Fetched then return end
+
+	assert(not IS_SERVER, `[{script.Name}] OnClient called on server!`)
+
+	return Fetched.OnClientEvent:Connect(Callback)
 end
 
 return NetworkRegistry
