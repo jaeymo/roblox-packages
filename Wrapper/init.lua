@@ -3,7 +3,7 @@
 --[[
 	Wrapper: Manages instantiating objects from tagged Instances
 	Author: jaeymo
-	Version: 0.5.0
+	Version: 1.0.0
 	License: MIT
 	Created: 09/06/2025
 	
@@ -40,7 +40,6 @@ local DEFAULT_OPTIONS =
 local Wrapper = {}
 Wrapper.__index = Wrapper
 
-
 export type Options = 
 {
 	Methods: {
@@ -71,6 +70,7 @@ type WrapperProperties<T> = {
 	Tag: string,
 	Class: Class<T>?,
 
+	SharedData: { [any]: any },
 	ObjectTroves: { [Instance]: Trove },
 	Objects: { [Instance]: T },
 	IdMap: { [string]: Instance },
@@ -89,6 +89,8 @@ export type Wrapper<T> = typeof(setmetatable({} :: WrapperProperties<T>, Wrapper
 	```
 ]=]
 function Wrapper.new<T>(class: Class<T>?, tag: string, options: Options?): Wrapper<T>
+	assert(type(tag) == "string", `Expected string, got: {type(tag)}`)
+	
 	local properties = {}
 	
 	properties.Options = options or {} :: Options
@@ -102,6 +104,7 @@ function Wrapper.new<T>(class: Class<T>?, tag: string, options: Options?): Wrapp
 		end
 	end
 	
+	properties.SharedData = {}
 	properties.ObjectTroves = {}
 	properties.Objects = {}
 	properties.IdMap = {}
@@ -253,7 +256,14 @@ function Wrapper.Apply<T>(self: Wrapper<T>, inst: Instance): T?
 
 		return nil
 	end
-	
+		
+	if not guid then
+		local existingGUID = inst:GetAttribute("GUID")
+		if existingGUID then
+			guid = existingGUID
+		end
+	end
+
 	if guid then
 		inst:SetAttribute("GUID", guid)
 		self.IdMap[guid] = inst
