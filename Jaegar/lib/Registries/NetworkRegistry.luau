@@ -8,7 +8,7 @@ local Packet = require(Root.Parent.Packet)
 local IS_SERVER = RunService:IsServer()
 
 local NetworkRegistry = {
-    Packets = {}
+	Packets = nil :: any?,
 }
 
 function NetworkRegistry:CreatePacket(...)
@@ -16,11 +16,11 @@ function NetworkRegistry:CreatePacket(...)
 end
 
 function NetworkRegistry:GetPacket(PacketName: string)
-    if not NetworkRegistry.Packets[PacketName] then
+    if not (NetworkRegistry.Packets :: any)[PacketName] then
         error(`[{script.Name}] Missing packet: {PacketName}`)
     end
 
-    return NetworkRegistry.Packets[PacketName]
+    return (NetworkRegistry.Packets :: any)[PacketName]
 end
 
 function NetworkRegistry:Inject(Packets: any)
