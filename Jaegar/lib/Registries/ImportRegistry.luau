@@ -1,7 +1,7 @@
 --!strict
 local Jaegar = script.Parent.Parent
 
-type ImportType = "Client" | "Server"
+type ImportType = "Controller" | "Service"
 
 local ImportRegistry = {
     CachedImports = {},

@@ -3,11 +3,13 @@ local RunService = game:GetService("RunService")
 
 local Root = script.Parent.Parent
 
-local Packet = require(Root.Packet)
+local Packet = require(Root.Parent.Packet)
 
 local IS_SERVER = RunService:IsServer()
 
-local NetworkRegistry = {}
+local NetworkRegistry = {
+    Packets = {}
+}
 
 function NetworkRegistry:CreatePacket(...)
     return Packet.new(...)

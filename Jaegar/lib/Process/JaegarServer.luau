@@ -3,10 +3,11 @@ local Root = script.Parent.Parent
 local Registries = Root.Registries
 
 local ImportRegistry = require(Registries.ImportRegistry)
-local Shared = require(script.Parent.Shared)
-local Promise = require(Root.Promise)
+local Types = require(Root.Data.Types)
+local Promise = require(Root.Parent.Promise)
+local Shared = require(script.Parent.Shared) :: Types.SharedModule
 
-local JaegarServer = {}
+local JaegarServer: Types.JaegarServer = {} :: any
 setmetatable(JaegarServer, {__index = Shared})
 
 local Initialized = false

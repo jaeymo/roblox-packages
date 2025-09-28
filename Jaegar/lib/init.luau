@@ -3,7 +3,7 @@
 --[[
 	Jaegar: A lightweight game framework
 	Author: jaeymo
-	Version: 1.0.0
+	Version: 1.2.2
 	License: MIT
 	Created: 09/28/2025
 	
@@ -11,6 +11,8 @@
 ]]
 
 local RunService = game:GetService("RunService")
+
+local Types = require(script.Data.Types)
 
 local IS_SERVER = RunService:IsServer()
 local IS_RUNNING = RunService:IsRunning()
@@ -26,7 +28,7 @@ local Jaegar = {}
 	local Jaegar = require(Jaegar):Server()
 	```
 ]=]
-function Jaegar:Server()
+function Jaegar:Server(): Types.JaegarServer
 	if not IS_SERVER then
 		error(`[{script.Name}] Cannot call :Server() on the client!`)
 	end
@@ -43,7 +45,7 @@ end
 	local Jaegar = require(Jaegar):Client()
 	```
 ]=]
-function Jaegar:Client()
+function Jaegar:Client(): Types.JaegarClient
 	if IS_SERVER then
 		error(`[{script.Name}] Cannot call :Client() on the Server!`)
 	end
