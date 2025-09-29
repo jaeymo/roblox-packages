@@ -1,0 +1,4 @@
+std = "roblox+luau"
+
+[rule_config]
+multiple_statements = "allowed"
