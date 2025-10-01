@@ -170,14 +170,12 @@ function ImportRegistry:Prepare()
         Entry.Finished = true
 
         task.spawn(function()
-            local Success, Err = pcall(function()
-                Entry.Import:Prepare()
-            end)
-
-            if not Success then
-                warn(`[{script.Name}] Error preparing {Identifier}: {Err}`)
+            if Verify(Entry.Import) then
+                if typeof(Entry.Import.Prepare) == "function" then
+                    Entry.Import:Prepare()
+                end
             end
-
+            
             if Entry.Signal then
                 Entry.Signal:Fire()
             end
