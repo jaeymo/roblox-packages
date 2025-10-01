@@ -11,20 +11,26 @@ export type NetworkRegistry = {
     OnClient: (self: NetworkRegistry, PacketName: string, Callback: (any) -> any) -> RBXScriptConnection?,
 }
 
+export type ImportType = "Controller" | "Service"
+
+export type ImportSettings = {
+    Dependencies: { string }?
+}
 export type SharedModule = {
     GetNetwork: (self: SharedModule) -> NetworkRegistry,
 }
 
 export type JaegarServer = SharedModule & {
     Start: (self: JaegarServer, BootstrapLocation: Instance | { Instance }) -> (),
-    CreateService: (self: JaegarServer, ServiceName: string, Service: any) -> any,
+    CreateService: (self: JaegarServer, ServiceName: string, Service: any, Settings: ImportSettings?) -> any,
     GetService: (self: JaegarServer, ServiceName: string) -> any,
 }
 
 export type JaegarClient = SharedModule & {
     Start: (self: JaegarClient, BootstrapLocation: Instance | { Instance }) -> (),
-    CreateController: (self: JaegarServer, ControllerName: string, Controller: any) -> any,
+    CreateController: (self: JaegarServer, ControllerName: string, Controller: any, Settings: ImportSettings?) -> any,
     GetController: (self: JaegarServer, ControllerName: string) -> any,
 }
+
 
 return {}

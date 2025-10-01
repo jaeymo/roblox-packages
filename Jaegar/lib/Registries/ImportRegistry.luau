@@ -1,13 +1,48 @@
 --!strict
-local Jaegar = script.Parent.Parent
+local Root = script.Parent.Parent
 
-type ImportType = "Controller" | "Service"
+local Signal = require(Root.Parent.Signal)
+local Types = require(Root.Data.Types)
+
+type ImportType = Types.ImportType
+type ImportSettings = Types.ImportSettings
 
 local ImportRegistry = {
+    ImportsReady = Signal.new(),
+    ImportsReadyFired = false,
+
+    DependencyMap = {},
     CachedImports = {},
     Controllers = {},
     Services = {},
 }
+
+local function DetectCycle(StartIdentifier: string, Graph: { [string]: any }): boolean
+    local Visited = {}
+    local Stack = {}
+
+    local function dfs(Node: string): boolean
+        if Stack[Node] then return true end
+        if Visited[Node] then  return false  end
+
+        Visited[Node] = true
+        Stack[Node] = true
+
+        local Entry = Graph[Node]
+        if Entry then
+            for _, Dependency in Entry.DependsOn do
+                if dfs(Dependency) then
+                    return true
+                end
+            end
+        end
+
+        Stack[Node] = false
+        return false
+    end
+
+    return dfs(StartIdentifier)
+end
 
 local function Verify(Import: any): boolean
     return type(Import) == "table"
@@ -15,7 +50,7 @@ end
 
 local function Request(Container: Instance)
     for _, Import in Container:GetDescendants() do
-        if Import == Jaegar or Import:IsDescendantOf(Jaegar) then
+        if Import == Root or Import:IsDescendantOf(Root) then
             continue
         end
 
@@ -59,9 +94,13 @@ function ImportRegistry:Bootstrap(Directories: Instance | { Instance } )
     end
 end
 
-function ImportRegistry:Create(ImportType: ImportType, Identifier: string, Import: any): any
+function ImportRegistry:Create(ImportType: ImportType, Identifier: string, Import: any, Settings: ImportSettings?): any
     if not Verify(Import) then
         error(`[{script.Name}] Invalid import type: {Identifier}`)
+    end
+
+    if DetectCycle(Identifier, self.DependencyMap) then
+        error(`[{script.Name}] Circular dependency detected at "{Identifier}"`)
     end
 
     local StorageLocation = GetStorageLocation(ImportType)
@@ -69,6 +108,15 @@ function ImportRegistry:Create(ImportType: ImportType, Identifier: string, Impor
         warn(`[{script.Name}] Duplicate registration: {Identifier}`)
         return nil
     end
+
+    Settings = Settings or {}
+    local Dependencies = (Settings :: ImportSettings).Dependencies or {} :: { string }
+
+    self.DependencyMap[Identifier] = {
+        DependsOn = Dependencies,
+        Finished = false,
+        Import = Import,
+    }
 
     StorageLocation[Identifier] = Import
     return Import
@@ -85,11 +133,70 @@ function ImportRegistry:Catch(ImportType: ImportType, Identifier: string): any
 end
 
 function ImportRegistry:Prepare()
-	for _, Import in self.CachedImports do
-		task.spawn(function()
-			Import:Prepare()
-		end)
-	end
+    local IdsToSeed = {}
+    for _, Import in self.CachedImports do
+        for Key, Value in self.DependencyMap do
+            if Value.Import == Import then
+                Value.Signal = Value.Signal or Signal.new()
+                table.insert(IdsToSeed, Key)
+                break
+            end
+        end
+    end
+
+    local Total = #IdsToSeed
+    local Completed = 0
+
+    local function TryPrepare(Identifier: string)
+        local Entry = self.DependencyMap[Identifier]
+        if not Entry then
+            return
+        end
+
+        if Entry.Finished then
+            return
+        end
+
+        for _, Dependency in Entry.DependsOn or {} do
+            local DependencyEntry = self.DependencyMap[Dependency]
+            if not DependencyEntry then
+                warn(`[{script.Name}] Dependency "{Dependency}" not found for {Identifier}`)
+                return
+            elseif not DependencyEntry.Finished then
+                return
+            end
+        end
+
+        Entry.Finished = true
+
+        task.spawn(function()
+            local Success, Err = pcall(function()
+                Entry.Import:Prepare()
+            end)
+
+            if not Success then
+                warn(`[{script.Name}] Error preparing {Identifier}: {Err}`)
+            end
+
+            if Entry.Signal then
+                Entry.Signal:Fire()
+            end
+
+            Completed = Completed + 1
+            if Completed >= Total and not self.ImportsReadyFired then
+                self.ImportsReady:Fire()
+                self.ImportsReadyFired = true
+            end
+
+            for Key, _ in self.DependencyMap do
+                TryPrepare(Key)
+            end
+        end)
+    end
+
+    for _, Id in IdsToSeed do
+        TryPrepare(Id)
+    end
 end
 
 return ImportRegistry
