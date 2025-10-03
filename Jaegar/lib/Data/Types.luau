@@ -28,9 +28,8 @@ export type JaegarServer = SharedModule & {
 
 export type JaegarClient = SharedModule & {
     Start: (self: JaegarClient, BootstrapLocation: Instance | { Instance }) -> (),
-    CreateController: (self: JaegarServer, ControllerName: string, Controller: any, Settings: ImportSettings?) -> any,
-    GetController: (self: JaegarServer, ControllerName: string) -> any,
+    CreateController: (self: JaegarClient, ControllerName: string, Controller: any, Settings: ImportSettings?) -> any,
+    GetController: (self: JaegarClient, ControllerName: string) -> any,
 }
-
 
 return {}
