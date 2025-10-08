@@ -13,22 +13,20 @@ export type NetworkRegistry = {
 
 export type ImportType = "Controller" | "Service"
 
-export type ImportSettings = {
-    Dependencies: { string }?
-}
 export type SharedModule = {
+    Network: NetworkRegistry,
     GetNetwork: (self: SharedModule) -> NetworkRegistry,
 }
 
 export type JaegarServer = SharedModule & {
     Start: (self: JaegarServer, BootstrapLocation: Instance | { Instance }) -> (),
-    CreateService: (self: JaegarServer, ServiceName: string, Service: any, Settings: ImportSettings?) -> any,
+    CreateService: (self: JaegarServer, ServiceName: string, Service: any) -> any,
     GetService: (self: JaegarServer, ServiceName: string) -> any,
 }
 
 export type JaegarClient = SharedModule & {
     Start: (self: JaegarClient, BootstrapLocation: Instance | { Instance }) -> (),
-    CreateController: (self: JaegarClient, ControllerName: string, Controller: any, Settings: ImportSettings?) -> any,
+    CreateController: (self: JaegarClient, ControllerName: string, Controller: any) -> any,
     GetController: (self: JaegarClient, ControllerName: string) -> any,
 }
 

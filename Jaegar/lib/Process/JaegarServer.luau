@@ -49,18 +49,13 @@ end
     @within JaegarServer
     @param ServiceName string
     @param Service any
-    @param Settings ImportSettings?
     @return any
     Registers a new service with the given name and definition.
 
     ```lua
-    local Settings = {
-        Dependencies = { "SomeDependency" }
-    }
-
     local MyService = Jaegar:CreateController("MyService", {
         Foo = 1,
-    }, Settings)
+    })
 
     function MyService:DoSomething()
         print(MyService.Foo)
@@ -69,8 +64,8 @@ end
     return MyService
     ```
 ]=]
-function JaegarServer:CreateService(ServiceName: string, Service: any, Settings: Types.ImportSettings?)
-    return ImportRegistry:Create("Service", ServiceName, Service, Settings)
+function JaegarServer:CreateService(ServiceName: string, Service: any)
+    return ImportRegistry:Create("Service", ServiceName, Service)
 end
 
 --[=[
