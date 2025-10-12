@@ -3,7 +3,7 @@
 --[[
 	Wrapper: Manages instantiating objects from tagged Instances
 	Author: jaeymo
-	Version: 1.0.0
+	Version: 1.0.1
 	License: MIT
 	Created: 09/06/2025
 	
@@ -340,6 +340,21 @@ function Wrapper.Revoke<T>(self: Wrapper<T>, inst: Instance)
 end
 
 --[=[
+	@method RevokeAll
+	@within Wrapper
+	Revokes all wrapped objects.
+	
+	```lua
+	wrapper:RevokeAll()
+	```
+]=]
+function Wrapper.RevokeAll<T>(self: Wrapper<T>)
+	for inst in self.Objects do
+		self:Revoke(inst)
+	end
+end
+
+--[=[
 	@method Destroy
 	@within Wrapper
 	Cleans up the entire Wrapper, destroying all tracked objects and resources.
@@ -349,10 +364,7 @@ end
 	```
 ]=]
 function Wrapper.Destroy<T>(self: Wrapper<T>)
-	for inst in self.Objects do
-		self:Revoke(inst)
-	end
-	
+	self:RevokeAll()
 	self.Trove:Destroy()
 end
 
