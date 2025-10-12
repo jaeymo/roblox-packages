@@ -1,0 +1,11 @@
+[package]
+name = "jaeymo/finite-state-machine"
+description = "FSM inspired by the Unreal Engine FSM"
+license = "MIT"
+version = "1.0.0"
+registry = "https://github.com/UpliftGames/wally-index"
+realm = "shared"
+
+[dependencies]
+general-util = "jaeymo/general-util@0.3.2"
+trove = "sleitnick/trove@1.5.1"
