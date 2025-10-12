@@ -32,7 +32,7 @@ function NetworkRegistry:Inject(Packets: any)
     return Packets
 end
 
-function NetworkRegistry:SendClient(PacketName: string, Client: Player, ...: any)
+function NetworkRegistry:SendClient(PacketName: string, Client: Player, ...: any): any
     if type(PacketName) ~= "string" then 
         error(`[{script.Name}] PacketName is not a string, got: {type(PacketName)}`) 
     end
@@ -41,10 +41,10 @@ function NetworkRegistry:SendClient(PacketName: string, Client: Player, ...: any
     local Fetched = NetworkRegistry:GetPacket(PacketName)
     if not Fetched then return end
 
-    Fetched:FireClient(Client, ...)
+    return Fetched:FireClient(Client, ...)
 end
 
-function NetworkRegistry:SendServer(PacketName: string, ...: any)
+function NetworkRegistry:SendServer(PacketName: string, ...: any): any
 	if type(PacketName) ~= "string" then 
 		error(`[{script.Name}] PacketName is not a string, got: {type(PacketName)}`) 
 	end
@@ -52,10 +52,10 @@ function NetworkRegistry:SendServer(PacketName: string, ...: any)
 	local Fetched = NetworkRegistry:GetPacket(PacketName)
 	if not Fetched then return end
 
-	Fetched:Fire(...)
+	return Fetched:Fire(...)
 end
 
-function NetworkRegistry:Broadcast(PacketName: string, ...: any)
+function NetworkRegistry:Broadcast(PacketName: string, ...: any): any
     if type(PacketName) ~= "string" then 
         error(`[{script.Name}] PacketName is not a string, got: {type(PacketName)}`) 
     end
@@ -63,7 +63,7 @@ function NetworkRegistry:Broadcast(PacketName: string, ...: any)
     local Fetched = NetworkRegistry:GetPacket(PacketName)
     if not Fetched then return end
 
-    Fetched:Fire(...)
+    return Fetched:Fire(...)
 end
 
 function NetworkRegistry:OnInvoke(PacketName: string, Callback: (...any) -> any)

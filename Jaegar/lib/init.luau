@@ -3,7 +3,7 @@
 --[[
 	Jaegar: A lightweight game framework
 	Author: jaeymo
-	Version: 1.3.3
+	Version: 1.3.4
 	License: MIT
 	Created: 09/28/2025
 	
