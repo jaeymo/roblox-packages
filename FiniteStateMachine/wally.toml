@@ -2,7 +2,7 @@
 name = "jaeymo/finite-state-machine"
 description = "FSM inspired by the Unreal Engine FSM"
 license = "MIT"
-version = "1.0.0"
+version = "1.0.1"
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"
 

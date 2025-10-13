@@ -3,7 +3,7 @@
 --[[
 	FiniteStateMachine: An FSM inspired by Unreal Engine
 	Author: jaeymo
-	Version: 1.0.0
+	Version: 1.0.1
 	License: MIT
 	Created: 10/12/2025
 
@@ -112,7 +112,7 @@ function FiniteStateMachine.ChangeState(self: FiniteStateMachine, NewStateName: 
 	self.CurrentState = NewStateName
 	
 	local NewStateProfile = self.States[NewStateName]
-	GeneralUtil.SafeCall(NewStateProfile, "OnExit", NewStateProfile)
+	GeneralUtil.SafeCall(NewStateProfile, "OnEnter", NewStateProfile)
 end
 
 function FiniteStateMachine:Update(DeltaTime: number)
