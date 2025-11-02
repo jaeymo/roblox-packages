@@ -1,16 +1,17 @@
 --!strict
 
 --[[
-	Wrapper: Manages instantiating objects from tagged Instances
+	Wrapper: Manages OOP classes by tracking tagged instances
 	Author: jaeymo
-	Version: 1.0.1
+	Version: 1.1.0
 	License: MIT
 	Created: 09/06/2025
-	
+
 	For issues or feedback message `jaeymo` on Discord!
 ]]
-	
+
 local GeneralUtil = require(script.Parent["general-util"])
+local Promise = require(script.Parent["promise"])
 local Viewer = require(script.Parent["viewer"])
 local Trove = require(script.Parent["trove"])
 
@@ -62,6 +63,7 @@ export type Trove = typeof(Trove.new())
 export type Class<T> = {
 	__index: any,
 	new: (inst: Instance, trove: Trove, guid: string?) -> T,
+	[any]: any,
 }
 
 type WrapperProperties<T> = {
@@ -90,38 +92,38 @@ export type Wrapper<T> = typeof(setmetatable({} :: WrapperProperties<T>, Wrapper
 ]=]
 function Wrapper.new<T>(class: Class<T>?, tag: string, options: Options?): Wrapper<T>
 	assert(type(tag) == "string", `Expected string, got: {type(tag)}`)
-	
+
 	local properties = {}
-	
+
 	properties.Options = options or {} :: Options
 	properties.Trove = Trove.new()
 	properties.Class = class
 	properties.Tag = tag
-	
+
 	for k, v in DEFAULT_OPTIONS do
 		if properties.Options[k] == nil then
 			properties.Options[k] = v
 		end
 	end
-	
+
 	properties.SharedData = {}
 	properties.ObjectTroves = {}
 	properties.Objects = {}
 	properties.IdMap = {}
-	
+
 	-- if there is a startup method, we will pass this wrapper object and the context to that func
 	local methods = properties.Options.Methods
 	local startup = methods and methods.Startup
 	local context = properties.Options.Context
 	local dbg = properties.Options.Debug :: boolean
-	
+
 	if startup then
 		GeneralUtil.DebugSafecall(class, startup, dbg, properties, context)
 	end
-	
+
 	local self = setmetatable(properties, Wrapper) :: Wrapper<T>
 	self:_watch()
-	
+
 	return self
 end
 
@@ -130,7 +132,7 @@ end
 	@within Wrapper
 	@return { [ Instance ]: T }
 	Returns all of the currently tracked objects.
-	
+
 	```lua
 	local objects = wrapper:GetAll()
 	```
@@ -170,6 +172,44 @@ end
 ]=]
 function Wrapper.GetObjectByGUID<T>(self: Wrapper<T>, GUID: string): T?	
 	return self.IdMap[GUID] and self:GetObject(self.IdMap[GUID])
+end
+
+--[=[
+	@method AwaitObject
+	@within Wrapper
+	@param inst Instance
+	@param timeout number?
+	@return Promise.TypedPromise
+
+	```lua
+	wrapper:AwaitObject(someInstance)
+		:andThen(function(object)
+			object:DoSomething()
+		end)
+		:catch(warn)
+	```
+]=]
+function Wrapper.AwaitObject<T>(self: Wrapper<T>, inst: Instance, timeout: number?): Promise.TypedPromise<T>
+	return Promise.new(function(resolve, reject)
+		if typeof(inst) ~= "Instance" then
+			reject("Invalid instance")
+			return
+		end
+
+		local start = os.clock()
+		local actualTimeout = timeout or 10
+
+		repeat
+			task.wait()
+			local object = self:GetObject(inst)
+			if object then
+				resolve(object)
+				return
+			end
+		until os.clock() - start >= actualTimeout
+
+		reject(`Timed out waiting for: {inst:GetFullName()}`)
+	end)
 end
 
 --[=[
