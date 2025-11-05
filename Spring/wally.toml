@@ -1,0 +1,10 @@
+[package]
+name = "jaeymo/spring"
+description = "Damped harmonic oscillator spring, properly typed version of the Quenty/NevermoreEngine Spring module"
+version = "1.0.1"
+authors = ["Jaeymo", "Quenty", "Defaultio", "Unascribed", "Scarious"]
+license = "MIT"
+registry = "https://github.com/UpliftGames/wally-index"
+realm = "shared"
+
+[dependencies]
