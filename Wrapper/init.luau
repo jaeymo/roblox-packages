@@ -2,8 +2,8 @@
 
 --[[
 	Wrapper: Manages OOP classes by tracking tagged instances
-	Author: jaeymo
-	Version: 1.1.0
+	Author: Jaeymo
+	Version: 1.2.0
 	License: MIT
 	Created: 09/06/2025
 
@@ -13,6 +13,7 @@
 local GeneralUtil = require(script.Parent["general-util"])
 local Promise = require(script.Parent["promise"])
 local Viewer = require(script.Parent["viewer"])
+local Signal = require(script.Parent["signal"])
 local Trove = require(script.Parent["trove"])
 
 local PREFIX = "WRAPPER"
@@ -76,7 +77,10 @@ type WrapperProperties<T> = {
 	ObjectTroves: { [Instance]: Trove },
 	Objects: { [Instance]: T },
 	IdMap: { [string]: Instance },
-	
+
+	OnAdded: Signal.Signal,
+	OnRevoked: Signal.Signal,
+
 	_isActive: boolean,
 }
 
@@ -84,7 +88,7 @@ export type Wrapper<T> = typeof(setmetatable({} :: WrapperProperties<T>, Wrapper
 
 --[=[
 	@return Wrapper<T>
-	Constructs a Wrapper object .
+	Constructs a Wrapper object.
 	
 	```lua
 	local wrapper = Wrapper.new()
@@ -110,6 +114,9 @@ function Wrapper.new<T>(class: Class<T>?, tag: string, options: Options?): Wrapp
 	properties.ObjectTroves = {}
 	properties.Objects = {}
 	properties.IdMap = {}
+	
+	properties.OnAdded = Signal.new()
+	properties.OnRevoked = Signal.new()
 
 	-- if there is a startup method, we will pass this wrapper object and the context to that func
 	local methods = properties.Options.Methods
@@ -147,7 +154,7 @@ end
 	@param inst Instance
 	@return T?
 	Gets the object associated with the given instance.
-	
+
 	```lua
 	local object = wrapper:GetObject(someInstance)
 	object:DoSomething()
@@ -189,7 +196,7 @@ end
 		:catch(warn)
 	```
 ]=]
-function Wrapper.AwaitObject<T>(self: Wrapper<T>, inst: Instance, timeout: number?): Promise.TypedPromise<T>
+function Wrapper.AwaitObject<T>(self: Wrapper<T>, inst: Instance, timeout: number?): Promise.TypedPromise
 	return Promise.new(function(resolve, reject)
 		if typeof(inst) ~= "Instance" then
 			reject("Invalid instance")
@@ -287,9 +294,9 @@ function Wrapper.Apply<T>(self: Wrapper<T>, inst: Instance): T?
 	local methods = self.Options.Methods
 	local constructor = methods and methods.Constructor or DEFAULT_OPTIONS.Methods.Constructor
 	local s, object = pcall(class[constructor], inst, objectTrove, guid)
+
 	if not s then
 		objectTrove:Destroy()
-
 		if self.Options.Debug then
 			warn(`[{PREFIX}] Failed to construct object for {inst:GetFullName()} | Error: {object}`)
 		end
@@ -325,6 +332,8 @@ function Wrapper.Apply<T>(self: Wrapper<T>, inst: Instance): T?
 	if not inst:HasTag(self.Tag) then
 		inst:AddTag(self.Tag)
 	end
+	
+	self.OnAdded:Fire(inst, objectTrove, object)
 	
 	return object
 end
@@ -373,7 +382,9 @@ function Wrapper.Revoke<T>(self: Wrapper<T>, inst: Instance)
 		
 		self.Objects[inst] = nil
 	end
-	
+
+	self.OnRevoked:Fire(inst, objectTrove)
+
 	if self.Options.Logging then
 		print(`[{PREFIX}] Removed instance: {inst:GetFullName()}`)
 	end
