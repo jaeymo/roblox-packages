@@ -1,0 +1,7 @@
+{
+    "name": "finite-state-machine",
+
+    "tree": {
+        "$path": "lib"
+    }
+}
