@@ -3,7 +3,7 @@
 --[[
 	Wrapper: Manages the life-cycle of object-oriented classes by tracking tagged instances
 	Author: Jaeymo
-	Version: 2.0.0
+	Version: 2.0.1
 	License: MIT
 	Created: 09/06/2025
 
@@ -45,22 +45,22 @@ type Trove = Trove.Trove
 type Signal = Signal.Signal
 type Promise = Promise.TypedPromise
 
-export type Options = 
-	{
-		Methods: {
-			Init: string,
-			Startup: string,
-			Destroy: string,
-			Constructor: string,
-		}?,
-		Context: any?,
-		GUID: string?,
-		Logging: boolean?,
-		Debug: boolean?,
-		AutoInit: boolean?,
-		Filter: ((object: Instance) -> boolean)?,
-		Resolver: ((instance: Instance) -> Class<any>)?,
-	}
+export type Options =
+{
+	Methods: {
+		Init: string,
+		Startup: string,
+		Destroy: string,
+		Constructor: string,
+	}?,
+	Context: any?,
+	GUID: string?,
+	Logging: boolean?,
+	Debug: boolean?,
+	AutoInit: boolean?,
+	Filter: ((object: Instance) -> boolean)?,
+	Resolver: ((instance: Instance) -> Class<any>)?,
+}
 
 export type Class<T> = {
 	__index: any,
@@ -90,20 +90,20 @@ export type Wrapper<T> = typeof(setmetatable({} :: WrapperProperties<T>, Wrapper
 --[=[
 	@return Wrapper<T>
 	Constructs a Wrapper object.
-	
+
 	```lua
 	local wrapper = Wrapper.new()
 	```
 ]=]
 function Wrapper.new<T>(Class: Class<T>?, Tag: string, Options: Options?): Wrapper<T>
 	assert(type(Tag) == "string", `Expected string, got: {type(Tag)}`)
-	
+
 	local self = setmetatable({} , Wrapper) :: Wrapper<T>
 	self.Options = Options or {} :: Options
 	self.Trove = Trove.new()
 	self.Class = Class
 	self.Tag = Tag
-	
+
 	for k, v in DEFAULT_OPTIONS do
 		if self.Options[k] == nil then
 			self.Options[k] = v
@@ -114,7 +114,7 @@ function Wrapper.new<T>(Class: Class<T>?, Tag: string, Options: Options?): Wrapp
 	self.ObjectTroves = {}
 	self.Objects = {}
 	self.IdMap = {}
-	
+
 	self.OnAdded = Signal.new()
 	self.OnRevoked = Signal.new()
 
@@ -169,7 +169,7 @@ end
 	@param GUID string
 	@return T?
 	Gets the object associated with the given GUID.
-	
+
 	```lua
 	local guid = "342dcb0a-11b0-4119-abd8-ef8a100816b4"
 	local object = wrapper:GetObjectByGUID(guid)
@@ -207,13 +207,13 @@ function Wrapper.AwaitObject<T>(self: Wrapper<T>, Inst: Instance, Timeout: numbe
 
 		repeat
 			task.wait()
-			
+
 			local Object = self:GetObject(Inst)
 			if Object then
 				resolve(Object)
 				return
 			end
-			
+
 		until os.clock() - Start >= ActualTimeout
 
 		reject(`Timed out waiting for: {Inst:GetFullName()}`)
@@ -228,7 +228,7 @@ end
 	@param ... any
 	@return any
 	Calls a method on the object associated with the given instance.
-	
+
 	```lua
 	local object = wrapper:GetObject(someInstance)
 	wrapper:Call(object, "DoSomething")
@@ -244,7 +244,7 @@ end
 	@param Method string
 	@param ... any
 	Calls a method on all objects.
-	
+
 	```lua
 	local randomVariable = 10
 	wrapper:CallAll("DoSomething", randomVariable)
@@ -263,7 +263,7 @@ end
 	Creates a new object for an instance and starts tracking it.
 	Also provides the object with a trove that will be cleaned up
 	upon destruction.
-	
+
 	```lua
 	local object = wrapper:Apply(someInstance)
 	if object then
@@ -298,7 +298,7 @@ function Wrapper.Apply<T>(self: Wrapper<T>, Inst: Instance): T?
 
 	if not Success then
 		ObjectTrove:Destroy()
-		
+
 		if self.Options.Debug then
 			warn(`[{script.Name}] Failed to construct object for {Inst.Name}. Error: {Object}`)
 		end
@@ -335,8 +335,6 @@ function Wrapper.Apply<T>(self: Wrapper<T>, Inst: Instance): T?
 		Inst:AddTag(self.Tag)
 	end
 
-	self.OnAdded:Fire(Inst, ObjectTrove, Object)
-
 	return Object
 end
 
@@ -347,13 +345,13 @@ end
 	Manually cleans up an object. Note, this does not
 	destroy the object (though that is another way to force
 	cleanup).
-	
+
 	```lua
 	local object = wrapper:Apply(someInstance)
-	
+
 	-- cleans up the instance in the wrapper
 	wrapper:Revoke(someInstance)
-	
+
 	-- you could also destroy the instance, thereby invoking the tag removed event
 	someInstance:Destroy -- also cleans up
 	```
@@ -385,8 +383,6 @@ function Wrapper.Revoke<T>(self: Wrapper<T>, Inst: Instance)
 		self.Objects[Inst] = nil
 	end
 
-	self.OnRevoked:Fire(Inst, ObjectTrove)
-
 	if self.Options.Logging then
 		warn(`[{script.Name}] Revoked instance: {Inst:GetFullName()}`)
 	end
@@ -396,7 +392,7 @@ end
 	@method RevokeAll
 	@within Wrapper
 	Revokes all wrapped objects.
-	
+
 	```lua
 	wrapper:RevokeAll()
 	```
@@ -411,7 +407,7 @@ end
 	@method Destroy
 	@within Wrapper
 	Cleans up the entire Wrapper, destroying all tracked objects and resources.
-	
+
 	```lua
 	wrapper:Destroy()
 	```
@@ -419,6 +415,11 @@ end
 function Wrapper.Destroy<T>(self: Wrapper<T>)
 	self:RevokeAll()
 	self.Trove:Destroy()
+	self.OnAdded:Destroy()
+	self.OnRevoked:Destroy()
+
+	table.clear(self)
+	setmetatable(self, nil)
 end
 
 function Wrapper._watch<T>(self: Wrapper<T>)
