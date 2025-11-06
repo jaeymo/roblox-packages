@@ -1,9 +1,9 @@
 --!strict
 
 --[[
-	Wrapper: Manages OOP classes by tracking tagged instances
+	Wrapper: Manages the life-cycle of object-oriented classes by tracking tagged instances
 	Author: Jaeymo
-	Version: 1.2.0
+	Version: 2.0.0
 	License: MIT
 	Created: 09/06/2025
 
@@ -16,14 +16,13 @@ local Viewer = require(script.Parent["viewer"])
 local Signal = require(script.Parent["signal"])
 local Trove = require(script.Parent["trove"])
 
-local PREFIX = "WRAPPER"
 local DEFAULT_OPTIONS = 
 {
 	Methods = {
 		Init = "Init",
-		Constructor = "new",
 		Destroy = "Destroy",
 		Startup = "OnStart",
+		Constructor = "new",
 	},
 
 	Debug = false,                                          -- Whether debug mode is enabled (extra logs, warnings, etc.)
@@ -31,7 +30,7 @@ local DEFAULT_OPTIONS =
 	Logging = false,                                        -- Logging of all instances being processed
 	AutoInit = true,                                        -- Automatically call the init method on creation
 	Filter = function(instance: Instance) return true end,  -- Function to filter instances
-	Resolver = function(instance: Instance) return nil end,
+	Resolver = function(instance: Instance) return nil end, -- If you want dynamic requires
 }
 
 --[=[
@@ -42,24 +41,26 @@ local DEFAULT_OPTIONS =
 local Wrapper = {}
 Wrapper.__index = Wrapper
 
-export type Options = 
-{
-	Methods: {
-		Init: string,
-		Startup: string,
-		Destroy: string,
-		Constructor: string,
-	}?,
-	Context: any?,
-	GUID: string?,
-	Logging: boolean?,
-	Debug: boolean?,
-	AutoInit: boolean?,
-	Filter: ((object: Instance) -> boolean)?,
-	Resolver: ((instance: Instance) -> Class<any>)?,
-}
+type Trove = Trove.Trove
+type Signal = Signal.Signal
+type Promise = Promise.TypedPromise
 
-export type Trove = typeof(Trove.new())
+export type Options = 
+	{
+		Methods: {
+			Init: string,
+			Startup: string,
+			Destroy: string,
+			Constructor: string,
+		}?,
+		Context: any?,
+		GUID: string?,
+		Logging: boolean?,
+		Debug: boolean?,
+		AutoInit: boolean?,
+		Filter: ((object: Instance) -> boolean)?,
+		Resolver: ((instance: Instance) -> Class<any>)?,
+	}
 
 export type Class<T> = {
 	__index: any,
@@ -78,8 +79,8 @@ type WrapperProperties<T> = {
 	Objects: { [Instance]: T },
 	IdMap: { [string]: Instance },
 
-	OnAdded: Signal.Signal,
-	OnRevoked: Signal.Signal,
+	OnAdded: Signal,
+	OnRevoked: Signal,
 
 	_isActive: boolean,
 }
@@ -94,41 +95,39 @@ export type Wrapper<T> = typeof(setmetatable({} :: WrapperProperties<T>, Wrapper
 	local wrapper = Wrapper.new()
 	```
 ]=]
-function Wrapper.new<T>(class: Class<T>?, tag: string, options: Options?): Wrapper<T>
-	assert(type(tag) == "string", `Expected string, got: {type(tag)}`)
-
-	local properties = {}
-
-	properties.Options = options or {} :: Options
-	properties.Trove = Trove.new()
-	properties.Class = class
-	properties.Tag = tag
-
+function Wrapper.new<T>(Class: Class<T>?, Tag: string, Options: Options?): Wrapper<T>
+	assert(type(Tag) == "string", `Expected string, got: {type(Tag)}`)
+	
+	local self = setmetatable({} , Wrapper) :: Wrapper<T>
+	self.Options = Options or {} :: Options
+	self.Trove = Trove.new()
+	self.Class = Class
+	self.Tag = Tag
+	
 	for k, v in DEFAULT_OPTIONS do
-		if properties.Options[k] == nil then
-			properties.Options[k] = v
+		if self.Options[k] == nil then
+			self.Options[k] = v
 		end
 	end
 
-	properties.SharedData = {}
-	properties.ObjectTroves = {}
-	properties.Objects = {}
-	properties.IdMap = {}
+	self.SharedData = {}
+	self.ObjectTroves = {}
+	self.Objects = {}
+	self.IdMap = {}
 	
-	properties.OnAdded = Signal.new()
-	properties.OnRevoked = Signal.new()
+	self.OnAdded = Signal.new()
+	self.OnRevoked = Signal.new()
 
 	-- if there is a startup method, we will pass this wrapper object and the context to that func
-	local methods = properties.Options.Methods
-	local startup = methods and methods.Startup
-	local context = properties.Options.Context
-	local dbg = properties.Options.Debug :: boolean
+	local Methods = self.Options.Methods
+	local Startup = Methods and Methods.Startup
+	local Context = self.Options.Context
+	local Debug = self.Options.Debug :: boolean
 
-	if startup then
-		GeneralUtil.DebugSafecall(class, startup, dbg, properties, context)
+	if Startup then
+		GeneralUtil.DebugSafecall(Class, Startup, Debug, self, Context)
 	end
 
-	local self = setmetatable(properties, Wrapper) :: Wrapper<T>
 	self:_watch()
 
 	return self
@@ -151,7 +150,7 @@ end
 --[=[
 	@method GetObject
 	@within Wrapper
-	@param inst Instance
+	@param Inst Instance
 	@return T?
 	Gets the object associated with the given instance.
 
@@ -160,8 +159,8 @@ end
 	object:DoSomething()
 	```
 ]=]
-function Wrapper.GetObject<T>(self: Wrapper<T>, inst: Instance): T?
-	return self.Objects[inst]
+function Wrapper.GetObject<T>(self: Wrapper<T>, Inst: Instance): T?
+	return self.Objects[Inst]
 end
 
 --[=[
@@ -184,8 +183,8 @@ end
 --[=[
 	@method AwaitObject
 	@within Wrapper
-	@param inst Instance
-	@param timeout number?
+	@param Inst Instance
+	@param Timeout number?
 	@return Promise.TypedPromise
 
 	```lua
@@ -196,34 +195,36 @@ end
 		:catch(warn)
 	```
 ]=]
-function Wrapper.AwaitObject<T>(self: Wrapper<T>, inst: Instance, timeout: number?): Promise.TypedPromise
+function Wrapper.AwaitObject<T>(self: Wrapper<T>, Inst: Instance, Timeout: number?): Promise
 	return Promise.new(function(resolve, reject)
-		if typeof(inst) ~= "Instance" then
+		if typeof(Inst) ~= "Instance" then
 			reject("Invalid instance")
 			return
 		end
 
-		local start = os.clock()
-		local actualTimeout = timeout or 10
+		local Start = os.clock()
+		local ActualTimeout = Timeout or 10
 
 		repeat
 			task.wait()
-			local object = self:GetObject(inst)
-			if object then
-				resolve(object)
+			
+			local Object = self:GetObject(Inst)
+			if Object then
+				resolve(Object)
 				return
 			end
-		until os.clock() - start >= actualTimeout
+			
+		until os.clock() - Start >= ActualTimeout
 
-		reject(`Timed out waiting for: {inst:GetFullName()}`)
+		reject(`Timed out waiting for: {Inst:GetFullName()}`)
 	end)
 end
 
 --[=[
 	@method Call
 	@within Wrapper
-	@param object T
-	@param fn string
+	@param Object T
+	@param Method string
 	@param ... any
 	@return any
 	Calls a method on the object associated with the given instance.
@@ -233,14 +234,14 @@ end
 	wrapper:Call(object, "DoSomething")
 	```
 ]=]
-function Wrapper.Call<T>(self: Wrapper<T>, object: T, fn: string, ...: any)
-	return GeneralUtil.DebugSafecall(object, fn, self.Options.Debug or DEFAULT_OPTIONS.Debug, ...)
+function Wrapper.Call<T>(self: Wrapper<T>, Object: T, Method: string, ...: any)
+	return GeneralUtil.DebugSafecall(Object, Method, self.Options.Debug or DEFAULT_OPTIONS.Debug, ...)
 end
 
 --[=[
 	@method CallAll
 	@within Wrapper
-	@param fn string
+	@param Method string
 	@param ... any
 	Calls a method on all objects.
 	
@@ -249,16 +250,16 @@ end
 	wrapper:CallAll("DoSomething", randomVariable)
 	```
 ]=]
-function Wrapper.CallAll<T>(self: Wrapper<T>, fn: string, ...: any)
-	for _, object in self.Objects do
-		self:Call(object, fn, ...)
+function Wrapper.CallAll<T>(self: Wrapper<T>, Method: string, ...: any)
+	for _, Object in self.Objects do
+		self:Call(Object, Method, ...)
 	end
 end
 
 --[=[
 	@method Apply
 	@within Wrapper
-	@param inst Instance
+	@param Inst Instance
 	Creates a new object for an instance and starts tracking it.
 	Also provides the object with a trove that will be cleaned up
 	upon destruction.
@@ -270,78 +271,79 @@ end
 	end
 	```
 ]=]
-function Wrapper.Apply<T>(self: Wrapper<T>, inst: Instance): T?
-	if self.Objects[inst] then return nil end
-	
-	if self.Options.Filter and not self.Options.Filter(inst) then
+function Wrapper.Apply<T>(self: Wrapper<T>, Inst: Instance): T?
+	if self.Objects[Inst] then return nil end
+
+	if self.Options.Filter and not self.Options.Filter(Inst) then
 		return nil
 	end
-	
-	local objectTrove = Trove.new()
-	local guid = self.Options.GUID and GeneralUtil.NewGUID(self.Options.GUID)
 
-	local class = self.Options.Resolver and self.Options.Resolver(inst) or self.Class
-	if not class then
-		objectTrove:Destroy()
+	local ObjectTrove = Trove.new()
+	local GUID = self.Options.GUID and GeneralUtil.NewGUID(self.Options.GUID)
+
+	local Class = self.Options.Resolver and self.Options.Resolver(Inst) or self.Class
+	if not Class then
+		ObjectTrove:Destroy()
 
 		if self.Options.Debug then
-			warn(`[{PREFIX}] No class could be resolved for {inst:GetFullName()}`)
+			warn(`[{script.Name}] No class could be resolved for: {Inst:GetFullName()}`)
 		end
 
 		return nil
 	end
-	
-	local methods = self.Options.Methods
-	local constructor = methods and methods.Constructor or DEFAULT_OPTIONS.Methods.Constructor
-	local s, object = pcall(class[constructor], inst, objectTrove, guid)
 
-	if not s then
-		objectTrove:Destroy()
-		if self.Options.Debug then
-			warn(`[{PREFIX}] Failed to construct object for {inst:GetFullName()} | Error: {object}`)
-		end
+	local Methods = self.Options.Methods
+	local Constructor = Methods and Methods.Constructor or DEFAULT_OPTIONS.Methods.Constructor
+	local Success, Object = pcall(Class[Constructor], Inst, ObjectTrove, GUID)
 
-		return nil
-	end
+	if not Success then
+		ObjectTrove:Destroy()
 		
-	if not guid then
-		local existingGUID = inst:GetAttribute("GUID")
-		if existingGUID then
-			guid = existingGUID
+		if self.Options.Debug then
+			warn(`[{script.Name}] Failed to construct object for {Inst.Name}. Error: {Object}`)
+		end
+
+		return nil
+	end
+
+	if not GUID then
+		local ExistingGUID = Inst:GetAttribute("GUID")
+		if ExistingGUID then
+			GUID = ExistingGUID
 		end
 	end
 
-	if guid then
-		inst:SetAttribute("GUID", guid)
-		self.IdMap[guid] = inst
+	if GUID then
+		Inst:SetAttribute("GUID", GUID)
+		self.IdMap[GUID] = Inst
 	end
-	
-	self.Objects[inst] = object
-	self.ObjectTroves[inst] = objectTrove
-	
+
+	self.Objects[Inst] = Object
+	self.ObjectTroves[Inst] = ObjectTrove
+
 	if self.Options.AutoInit then
-		local init = methods and methods.Init or DEFAULT_OPTIONS.Methods.Init
-		local dbg = self.Options.Debug or DEFAULT_OPTIONS.Debug
-		GeneralUtil.DebugSafecall(object, init, dbg)
+		local Init = Methods and Methods.Init or DEFAULT_OPTIONS.Methods.Init
+		local Debug = self.Options.Debug or DEFAULT_OPTIONS.Debug
+		GeneralUtil.DebugSafecall(Object, Init, Debug)
 	end
-	
+
 	if self.Options.Logging then
-		print(`[{PREFIX}] Added instance: {inst:GetFullName()}`)
+		warn(`[{script.Name}] Added instnace: {Inst:GetFullName()}`)
 	end
-	
-	if not inst:HasTag(self.Tag) then
-		inst:AddTag(self.Tag)
+
+	if not Inst:HasTag(self.Tag) then
+		Inst:AddTag(self.Tag)
 	end
-	
-	self.OnAdded:Fire(inst, objectTrove, object)
-	
-	return object
+
+	self.OnAdded:Fire(Inst, ObjectTrove, Object)
+
+	return Object
 end
 
 --[=[
 	@method Revoke
 	@within Wrapper
-	@param inst Instance
+	@param Inst Instance
 	Manually cleans up an object. Note, this does not
 	destroy the object (though that is another way to force
 	cleanup).
@@ -356,37 +358,37 @@ end
 	someInstance:Destroy -- also cleans up
 	```
 ]=]
-function Wrapper.Revoke<T>(self: Wrapper<T>, inst: Instance)
-	if not self.Objects[inst] then return end
-	
-	if inst:GetAttribute("GUID") then
-		self.IdMap[inst:GetAttribute("GUID")] = nil
-		inst:SetAttribute("GUID", nil)
+function Wrapper.Revoke<T>(self: Wrapper<T>, Inst: Instance)
+	if not self.Objects[Inst] then return end
+
+	if Inst:GetAttribute("GUID") then
+		self.IdMap[Inst:GetAttribute("GUID")] = nil
+		Inst:SetAttribute("GUID", nil)
 	end
 
-	local objectTrove = self.ObjectTroves[inst]
-	if objectTrove then
-		objectTrove:Destroy()
-		self.ObjectTroves[inst] = nil
-	end
-	
-	local object = self.Objects[inst]
-	if object then
-		local methods = self.Options.Methods
-		local destroy = methods and methods.Destroy or DEFAULT_OPTIONS.Methods.Destroy
-		local dbg = self.Options.Debug or DEFAULT_OPTIONS.Debug
-		GeneralUtil.DebugSafecall(object, destroy, dbg)
-
-		setmetatable(object :: any, nil)
-		table.clear(object :: any)
-		
-		self.Objects[inst] = nil
+	local ObjectTrove = self.ObjectTroves[Inst]
+	if ObjectTrove then
+		ObjectTrove:Destroy()
+		self.ObjectTroves[Inst] = nil
 	end
 
-	self.OnRevoked:Fire(inst, objectTrove)
+	local Object = self.Objects[Inst]
+	if Object then
+		local Methods = self.Options.Methods
+		local Destroy = Methods and Methods.Destroy or DEFAULT_OPTIONS.Methods.Destroy
+		local Debug = self.Options.Debug or DEFAULT_OPTIONS.Debug
+		GeneralUtil.DebugSafecall(Object, Destroy, Debug)
+
+		setmetatable(Object :: any, nil)
+		table.clear(Object :: any)
+
+		self.Objects[Inst] = nil
+	end
+
+	self.OnRevoked:Fire(Inst, ObjectTrove)
 
 	if self.Options.Logging then
-		print(`[{PREFIX}] Removed instance: {inst:GetFullName()}`)
+		warn(`[{script.Name}] Revoked instance: {Inst:GetFullName()}`)
 	end
 end
 
@@ -400,8 +402,8 @@ end
 	```
 ]=]
 function Wrapper.RevokeAll<T>(self: Wrapper<T>)
-	for inst in self.Objects do
-		self:Revoke(inst)
+	for Inst in self.Objects do
+		self:Revoke(Inst)
 	end
 end
 
@@ -422,16 +424,17 @@ end
 function Wrapper._watch<T>(self: Wrapper<T>)
 	if self._isActive then return end
 	self._isActive = true
-	
-	self.Trove:Add(Viewer.WatchTag(self.Tag, false, function(inst: Instance)
-		self:Apply(inst)
+
+	self.Trove:Add(Viewer.WatchTag(self.Tag, false, function(Inst: Instance)
+		self:Apply(Inst)
 	end))
-	
-	self.Trove:Add(Viewer.WatchTag(self.Tag, true, function(inst: Instance)
-		self:Revoke(inst)
+
+	self.Trove:Add(Viewer.WatchTag(self.Tag, true, function(Inst: Instance)
+		self:Revoke(Inst)
 	end))
 end
 
+-- syntax sugar :)
 Wrapper.__call = function(_, ...)
 	return Wrapper.new(...)
 end
