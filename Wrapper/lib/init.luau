@@ -3,7 +3,7 @@
 --[[
 	Wrapper: Manages the life-cycle of object-oriented classes by tracking tagged instances
 	Author: Jaeymo
-	Version: 2.0.1
+	Version: 2.0.2
 	License: MIT
 	Created: 09/06/2025
 
@@ -328,7 +328,7 @@ function Wrapper.Apply<T>(self: Wrapper<T>, Inst: Instance): T?
 	end
 
 	if self.Options.Logging then
-		warn(`[{script.Name}] Added instnace: {Inst:GetFullName()}`)
+		warn(`[{script.Name}] Added instance: {Inst:GetFullName()}`)
 	end
 
 	if not Inst:HasTag(self.Tag) then
@@ -414,9 +414,9 @@ end
 ]=]
 function Wrapper.Destroy<T>(self: Wrapper<T>)
 	self:RevokeAll()
-	self.Trove:Destroy()
-	self.OnAdded:Destroy()
 	self.OnRevoked:Destroy()
+	self.OnAdded:Destroy()
+	self.Trove:Destroy()
 
 	table.clear(self)
 	setmetatable(self, nil)
