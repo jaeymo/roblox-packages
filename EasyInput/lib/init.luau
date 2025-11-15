@@ -3,15 +3,15 @@
 --[[
 	EasyInput: Context-based input module, with various input types.
 	Author: jaeymo
-	Version: 1.0.0
+	Version: 1.0.1
 	License: MIT
 	Created: 11/14/2025
 
 	For issues or feedback message `jaeymo` on Discord!
 ]]
 
-local Signal = require(script.Parent.Signal)
-local Trove = require(script.Parent.Trove)
+local Signal = require(script.Parent.signal)
+local Trove = require(script.Parent.trove)
 local Observer = require(script.Observer)
 local Context = require(script.Context)
 local Types = require(script.Types)

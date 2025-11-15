@@ -1,7 +1,7 @@
 --!strict
 local Root = script.Parent.Parent
 
-local Signal = require(Root.Parent.Signal)
+local Signal = require(Root.Parent.signal)
 local Platform = require(script.Platform)
 local Types = require(Root.Types)
 

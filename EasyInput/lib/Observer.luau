@@ -3,8 +3,8 @@ local UserInputService = game:GetService("UserInputService")
 
 local Root = script.Parent
 
-local Signal = require(Root.Parent.Signal)
-local Trove = require(Root.Parent.Trove)
+local Signal = require(Root.Parent.signal)
+local Trove = require(Root.Parent.trove)
 
 local Observer = {}
 Observer.__index = Observer

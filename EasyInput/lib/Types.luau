@@ -1,6 +1,6 @@
 local Root = script.Parent
 
-local Signal = require(Root.Parent.Signal)
+local Signal = require(Root.Parent.signal)
 
 export type Platform = "PC" | "Mobile" | "Console"
 
