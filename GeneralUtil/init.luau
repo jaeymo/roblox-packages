@@ -3,7 +3,7 @@
 --[[
 	GeneralUtil: A module for generic utility functions
 	Author: jaeymo
-	Version: 0.3.2
+	Version: 0.4.0
 	License: MIT
 	Created: 09/06/2025
 

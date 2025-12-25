@@ -3,6 +3,6 @@ name = "jaeymo/general-util"
 description = "Simple utility functions"
 license = "MIT"
 authors = ["jaeymo"]
-version = "0.3.2"
+version = "0.4.0"
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"
