@@ -58,7 +58,7 @@ function GeneralUtil.DebugSafecall(Tbl: any, Fn: string, Debug: boolean, ...: an
 	if typeof(method) == "function" then
 		local Ok, Result = pcall(method, Tbl, ...)
 
-		if not Ok and Debug then
+		if not Ok then
 			warn(`[{PREFIX}] Error calling "{Fn}" on tbl, result: {Result}`)
 		end
 
