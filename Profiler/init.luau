@@ -3,7 +3,7 @@
 --[[
 	Profiler: Manages and transitions between profiles (state-like objects)
 	Author: jaeymo
-	Version: 1.1.0
+	Version: 1.1.1
 	License: MIT
 	Created: 09/29/2025
 	
@@ -37,7 +37,7 @@ export type Profiler<T> = typeof(setmetatable({} :: {
 	local profiler = Profiler.new(someFolder, "Prepare")
 	```
 ]=]
-function Profiler.new<T>(Container: Instance, InitCall: string): Profiler<T>
+function Profiler.new<T>(Container: Instance, InitCall: string?): Profiler<T>
     local self = setmetatable({}, Profiler)
     self.Profiles = Loader.LoadChildren(Container)
 
