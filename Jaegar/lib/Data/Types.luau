@@ -19,13 +19,13 @@ export type SharedModule = {
 }
 
 export type JaegarServer = SharedModule & {
-    Start: (self: JaegarServer, BootstrapLocation: Instance | { Instance }) -> (),
+    Start: (self: JaegarServer, BootstrapLocation: Instance | { Instance }, Debug: boolean?) -> (),
     CreateService: (self: JaegarServer, ServiceName: string, Service: any) -> any,
     GetService: (self: JaegarServer, ServiceName: string) -> any,
 }
 
 export type JaegarClient = SharedModule & {
-    Start: (self: JaegarClient, BootstrapLocation: Instance | { Instance }) -> (),
+    Start: (self: JaegarClient, BootstrapLocation: Instance | { Instance }, Debug: boolean?) -> (),
     CreateController: (self: JaegarClient, ControllerName: string, Controller: any) -> any,
     GetController: (self: JaegarClient, ControllerName: string) -> any,
 }

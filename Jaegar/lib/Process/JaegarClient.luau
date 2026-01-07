@@ -33,7 +33,7 @@ local Initialized = false
     Jaegar:Start(Locations)
     ```
 ]=]
-function JaegarClient:Start(BootstrapLocation: Instance | { Instance } )
+function JaegarClient:Start(BootstrapLocation: Instance | { Instance }, Debug: boolean? )
     if Initialized then
         error(`[{script.Name}] Jaegar should only be started once per client`)
     end
@@ -41,11 +41,11 @@ function JaegarClient:Start(BootstrapLocation: Instance | { Instance } )
     Initialized = true
 
     Promise.try(function()
-        ImportRegistry:Bootstrap(BootstrapLocation)
+        ImportRegistry:Bootstrap(BootstrapLocation, Debug)
     end):andThen(function()
         ImportRegistry:Prepare()
     end):catch(function(err)
-        warn(`[{script.Name}] Failed to start: {err}`)
+        error(err)
     end)
 end
 

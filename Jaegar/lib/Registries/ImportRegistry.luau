@@ -19,14 +19,22 @@ local function Verify(Import: any): boolean
     return type(Import) == "table"
 end
 
-local function Request(Container: Instance)
+local function Request(Container: Instance, Debug: boolean?)
     for _, Import in Container:GetDescendants() do
         if Import == Root or Import:IsDescendantOf(Root) then
             continue
         end
 
         if Import:IsA("ModuleScript") then
+            if Debug then
+                print(Import.Name)
+            end
+            
             local Success, Cached = pcall(require, Import)
+            if Debug then
+                print(Success, Cached)
+            end
+
             if Success and Verify(Cached) then
                 if type(Cached.Prepare) ~= "function" then
                     continue
@@ -37,8 +45,6 @@ local function Request(Container: Instance)
                 end
 
                 table.insert(ImportRegistry.CachedImports, Cached)
-            else
-                error(Cached)
             end
         elseif #Import:GetDescendants() > 0 then
             Request(Import)
@@ -50,14 +56,13 @@ local function GetStorageLocation(ImportType: ImportType): { [string]: any }
     return (ImportType == "Service" and ImportRegistry.Services) or ImportRegistry.Controllers
 end
 
-function ImportRegistry:Bootstrap(Directories: Instance | { Instance })
+function ImportRegistry:Bootstrap(Directories: Instance | { Instance }, Debug: boolean?)
     if typeof(Directories) == "Instance" then
-        Request(Directories :: Instance)
-
+        Request(Directories :: Instance, Debug)
     elseif typeof(Directories) == "table" then
         for _, Directory in Directories do
             if typeof(Directory) == "Instance" then
-                Request(Directory)
+                Request(Directory, Debug)
             else
                 warn(`[{script.Name}] Invalid directory type in bootstrapping list: {typeof(Directory)}`)
             end

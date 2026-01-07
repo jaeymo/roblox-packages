@@ -30,17 +30,17 @@ local Initialized = false
     Jaegar:Start(Locations)
     ```
 ]=]
-function JaegarServer:Start(BootstrapLocation: Instance | { Instance } )
+function JaegarServer:Start(BootstrapLocation: Instance | { Instance }, Debug: boolean?)
     if Initialized then
         error(`[{script.Name}] Jaegar should only be started once`)
     end
 
     Promise.try(function()
-        ImportRegistry:Bootstrap(BootstrapLocation)
+        ImportRegistry:Bootstrap(BootstrapLocation, Debug)
     end):andThen(function()
         ImportRegistry:Prepare()
     end):catch(function(err)
-        warn(`[{script.Name}] Error on startup: {err}`)
+        err(err)
     end)
 end
 
