@@ -37,6 +37,8 @@ local function Request(Container: Instance)
                 end
 
                 table.insert(ImportRegistry.CachedImports, Cached)
+            else
+                error(Cached)
             end
         elseif #Import:GetDescendants() > 0 then
             Request(Import)
@@ -48,7 +50,7 @@ local function GetStorageLocation(ImportType: ImportType): { [string]: any }
     return (ImportType == "Service" and ImportRegistry.Services) or ImportRegistry.Controllers
 end
 
-function ImportRegistry:Bootstrap(Directories: Instance | { Instance } )
+function ImportRegistry:Bootstrap(Directories: Instance | { Instance })
     if typeof(Directories) == "Instance" then
         Request(Directories :: Instance)
 
