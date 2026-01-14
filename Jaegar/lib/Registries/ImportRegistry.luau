@@ -19,23 +19,17 @@ local function Verify(Import: any): boolean
     return type(Import) == "table"
 end
 
-local function Request(Container: Instance, Debug: boolean?)
+local function Request(Container: Instance)
     for _, Import in Container:GetDescendants() do
         if Import == Root or Import:IsDescendantOf(Root) then
             continue
         end
 
         if Import:IsA("ModuleScript") then
-            if Debug then
-                print(Import.Name)
-            end
-            
             local Success, Cached = pcall(require, Import)
-            if Debug then
-                print(Success, Cached)
-            end
-
-            if Success and Verify(Cached) then
+            if not Success then
+                warn(Cached)
+            elseif Success and Verify(Cached) then
                 if type(Cached.Prepare) ~= "function" then
                     continue
                 end

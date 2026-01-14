@@ -33,7 +33,7 @@ local Initialized = false
     Jaegar:Start(Locations)
     ```
 ]=]
-function JaegarClient:Start(BootstrapLocation: Instance | { Instance }, Debug: boolean? )
+function JaegarClient:Start(BootstrapLocation: Instance | { Instance })
     if Initialized then
         error(`[{script.Name}] Jaegar should only be started once per client`)
     end
