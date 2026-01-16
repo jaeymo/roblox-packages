@@ -11,7 +11,9 @@ local Shared = require(script.Parent.Shared) :: Types.SharedModule
 	@class JaegarClient
     Client-sided bootstrapper and manager for the Jaegar framework.
 ]=]
-local JaegarClient: Types.JaegarClient = {} :: any
+local JaegarClient: Types.JaegarClient = {
+    ImportRegistry = (ImportRegistry::any) :: Types.ImportRegistry,
+} :: any
 setmetatable(JaegarClient, {__index = Shared})
 
 local Initialized = false
@@ -22,6 +24,7 @@ local Initialized = false
     @param BootstrapLocation Instance | { Instance }
     Boots the client framework by loading all provided controllers
     from the given location(s). Should only be called once.
+    @return Promise.TypedPromise<any>
 
     ```lua
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -33,19 +36,15 @@ local Initialized = false
     Jaegar:Start(Locations)
     ```
 ]=]
-function JaegarClient:Start(BootstrapLocation: Instance | { Instance })
+function JaegarClient:Start(BootstrapLocation: Instance | { Instance }): Promise.TypedPromise<any>
     if Initialized then
-        error(`[{script.Name}] Jaegar should only be started once per client`)
+        error(`[{script.Name}] Jaegar should only be started once`)
     end
-
-    Initialized = true
-
-    Promise.try(function()
-        ImportRegistry:Bootstrap(BootstrapLocation, Debug)
-    end):andThen(function()
+    
+    return Promise.new(function(Resolve, Reject)
+        ImportRegistry:Bootstrap(BootstrapLocation)
         ImportRegistry:Prepare()
-    end):catch(function(err)
-        error(err)
+        Resolve()
     end)
 end
 

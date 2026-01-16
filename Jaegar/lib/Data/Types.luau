@@ -1,3 +1,5 @@
+local Promise = require(script.Parent.Parent.Parent.Promise)
+
 export type NetworkRegistry = {
     Packets: { [string]: any }?,
     CreatePacket: (self: NetworkRegistry, ...any) -> any,
@@ -11,6 +13,27 @@ export type NetworkRegistry = {
     OnClient: (self: NetworkRegistry, PacketName: string, Callback: (any) -> any) -> RBXScriptConnection?,
 }
 
+export type LoadMetric = {
+    Name: string,
+    Path: string,
+    Time: number,
+    Warned: boolean,
+}
+
+export type ImportRegistry = {
+    CachedImports: { any },
+    Controllers: { [string]: any },
+    Services: { [string]: any },
+    LoadMetrics: { LoadMetric },
+
+    Bootstrap: (self: ImportRegistry, Directories: Instance | { Instance } ) -> (),
+    Create: (self: ImportRegistry, ImportType: ImportType, Identifier: string, Import: any) -> any,
+    Catch: (self: ImportRegistry, ImportType: ImportRegistry, Identifier: string) -> any,
+    Prepare: (self: ImportRegistry) -> (),
+    SimpleOutput: (self: ImportRegistry) -> (),
+    PrintLoadReport: (self: ImportRegistry) -> (),
+}
+
 export type ImportType = "Controller" | "Service"
 
 export type SharedModule = {
@@ -19,13 +42,17 @@ export type SharedModule = {
 }
 
 export type JaegarServer = SharedModule & {
-    Start: (self: JaegarServer, BootstrapLocation: Instance | { Instance }) -> (),
+    ImportRegistry: ImportRegistry,
+
+    Start: (self: JaegarServer, BootstrapLocation: Instance | { Instance }) -> Promise.TypedPromise<any>,
     CreateService: (self: JaegarServer, ServiceName: string, Service: any) -> any,
     GetService: (self: JaegarServer, ServiceName: string) -> any,
 }
 
 export type JaegarClient = SharedModule & {
-    Start: (self: JaegarClient, BootstrapLocation: Instance | { Instance }) -> (),
+    ImportRegistry: ImportRegistry,
+
+    Start: (self: JaegarClient, BootstrapLocation: Instance | { Instance }) -> Promise.TypedPromise<any>,
     CreateController: (self: JaegarClient, ControllerName: string, Controller: any) -> any,
     GetController: (self: JaegarClient, ControllerName: string) -> any,
 }

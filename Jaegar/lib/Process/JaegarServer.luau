@@ -7,7 +7,9 @@ local Types = require(Root.Data.Types)
 local Promise = require(Root.Parent.Promise)
 local Shared = require(script.Parent.Shared) :: Types.SharedModule
 
-local JaegarServer: Types.JaegarServer = {} :: any
+local JaegarServer: Types.JaegarServer = {
+    ImportRegistry = (ImportRegistry::any) :: Types.ImportRegistry,
+} :: any
 setmetatable(JaegarServer, {__index = Shared})
 
 local Initialized = false
@@ -18,7 +20,8 @@ local Initialized = false
     @param BootstrapLocation Instance | { Instance }
     Boots the server framework by loading all provided services
     from the given location(s). Should only be called once.
-
+    @return Promise.TypedPromise<any>
+    
     ```lua
     local ServerScriptService = game:GetService("ServerScriptService")
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
@@ -30,17 +33,15 @@ local Initialized = false
     Jaegar:Start(Locations)
     ```
 ]=]
-function JaegarServer:Start(BootstrapLocation: Instance | { Instance })
+function JaegarServer:Start(BootstrapLocation: Instance | { Instance }): Promise.TypedPromise<any>
     if Initialized then
         error(`[{script.Name}] Jaegar should only be started once`)
     end
-
-    Promise.try(function()
+    
+    return Promise.new(function(Resolve, Reject)
         ImportRegistry:Bootstrap(BootstrapLocation)
-    end):andThen(function()
         ImportRegistry:Prepare()
-    end):catch(function(err)
-        err(err)
+        Resolve()
     end)
 end
 
