@@ -66,7 +66,7 @@ local function Request(Container: Instance)
             then
                 table.insert(ImportRegistry.CachedImports, Cached)
             elseif not Success then
-                warn(Cached)
+                warn(Import, Cached)
             end
         end
 
