@@ -79,7 +79,7 @@ function NetworkRegistry.OnInvoke(self: NetworkRegistry, PacketName: string, Cal
 	end
 end
 
-function NetworkRegistry.OnServer(self: NetworkRegistry, PacketName: string, Callback: (Player, any) -> ())
+function NetworkRegistry.OnServer(self: NetworkRegistry, PacketName: string, Callback: (Player, ...any) -> ())
 	local Fetched = self:GetPacket(PacketName)
 	if not Fetched then return end
     
@@ -88,7 +88,7 @@ function NetworkRegistry.OnServer(self: NetworkRegistry, PacketName: string, Cal
 	return Fetched.OnServerEvent:Connect(Callback)
 end
 
-function NetworkRegistry.OnClient(self: NetworkRegistry, PacketName: string, Callback: (any) -> ())
+function NetworkRegistry.OnClient(self: NetworkRegistry, PacketName: string, Callback: (...any) -> ())
 	local Fetched = self:GetPacket(PacketName)
 	if not Fetched then return end
 
