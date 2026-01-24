@@ -9,8 +9,8 @@ export type NetworkRegistry = {
     SendServer: (self: NetworkRegistry, PacketName: string, ...any) -> any,
     Broadcast: (self: NetworkRegistry, PacketName: string, ...any) -> any,
     OnInvoke: (self: NetworkRegistry, PacketName: string, Callback: (...any) -> any) -> (),
-    OnServer: (self: NetworkRegistry, PacketName: string, Callback: (Player, any) -> any) -> RBXScriptConnection?,
-    OnClient: (self: NetworkRegistry, PacketName: string, Callback: (any) -> any) -> RBXScriptConnection?,
+    OnServer: (self: NetworkRegistry, PacketName: string, Callback: (Player, any) -> ()) -> RBXScriptConnection?,
+    OnClient: (self: NetworkRegistry, PacketName: string, Callback: (any) -> ()) -> RBXScriptConnection?,
 }
 
 export type LoadMetric = {
