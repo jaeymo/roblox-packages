@@ -61,7 +61,7 @@ local function Request(Container: Instance)
             })
 
             if Success and Verify(Cached)
-                and type(Cached.jaegerInit) == "function"
+                and type(Cached.jaegarInit) == "function"
                 and not table.find(ImportRegistry.CachedImports, Cached)
             then
                 table.insert(ImportRegistry.CachedImports, Cached)
@@ -124,7 +124,7 @@ end
 function ImportRegistry.Prepare(self: ImportRegistry)
     for _, Import in self.CachedImports do
         task.spawn(function()
-            Import:jaegerInit()
+            Import:jaegarInit()
         end)
     end
 end
