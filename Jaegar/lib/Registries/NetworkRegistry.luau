@@ -70,9 +70,9 @@ function NetworkRegistry.Broadcast(self: NetworkRegistry, PacketName: string, ..
 end
 
 function NetworkRegistry.BroadcastExcept(
-    self: NetworkRegistry, 
-    PacketName: string, 
-    Except: Player | {Player}, 
+    self: NetworkRegistry,
+    PacketName: string,
+    Except: Player | {Player},
     ...: any
 ): ()
     if type(PacketName) ~= "string" then 
@@ -82,21 +82,20 @@ function NetworkRegistry.BroadcastExcept(
     local Fetched = self:GetPacket(PacketName)
     if not Fetched then return end
 
-    assert(IS_SERVER, `[{script.Name}] BroadcastExcept can only be called on the server!`)
+    if not IS_SERVER then return end
 
     local Excluded: {[Player]: boolean} = {}
 
     if typeof(Except) == "Instance" then
-        assert(Except:IsA("Player"), `[{script.Name}] Except must be Player`)
-        Excluded[Except] = true
-    elseif type(Except) == "table" then
-        for _, Player in Except do
-            assert(typeof(Player) == "Instance" and Player:IsA("Player"), 
-                `[{script.Name}] Invalid player in exclusion list`)
-            Excluded[Player] = true
+        if Except:IsA("Player") then
+            Excluded[Except] = true
         end
-    else
-        error(`[{script.Name}] Except must be Player`)
+    elseif type(Except) == "table" then
+        for _, v in Except do
+            if typeof(v) == "Instance" and v:IsA("Player") then
+                Excluded[v] = true
+            end
+        end
     end
 
     for _, Player in Players:GetPlayers() do

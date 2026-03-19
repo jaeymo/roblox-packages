@@ -8,6 +8,7 @@ export type NetworkRegistry = {
     SendClient: (self: NetworkRegistry, PacketName: string, Client: Player, ...any) -> any,
     SendServer: (self: NetworkRegistry, PacketName: string, ...any) -> any,
     Broadcast: (self: NetworkRegistry, PacketName: string, ...any) -> any,
+    BroadcastExcept: (self: NetworkRegistry, PacketName: string, Except: Player | { Player }, ...any) -> (),
     OnInvoke: (self: NetworkRegistry, PacketName: string, Callback: (...any) -> any) -> (),
     OnServer: (self: NetworkRegistry, PacketName: string, Callback: (Player, ...any) -> ()) -> RBXScriptConnection?,
     OnClient: (self: NetworkRegistry, PacketName: string, Callback: (...any) -> ()) -> RBXScriptConnection?,
