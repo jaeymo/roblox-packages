@@ -1,4 +1,5 @@
 --!strict
+local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 
 local Root = script.Parent.Parent
@@ -66,6 +67,43 @@ function NetworkRegistry.Broadcast(self: NetworkRegistry, PacketName: string, ..
     if not Fetched then return end
 
     return Fetched:Fire(...)
+end
+
+function NetworkRegistry.BroadcastExcept(
+    self: NetworkRegistry, 
+    PacketName: string, 
+    Except: Player | {Player}, 
+    ...: any
+): ()
+    if type(PacketName) ~= "string" then 
+        error(`[{script.Name}] PacketName is not a string, got: {type(PacketName)}`) 
+    end
+
+    local Fetched = self:GetPacket(PacketName)
+    if not Fetched then return end
+
+    assert(IS_SERVER, `[{script.Name}] BroadcastExcept can only be called on the server!`)
+
+    local Excluded: {[Player]: boolean} = {}
+
+    if typeof(Except) == "Instance" then
+        assert(Except:IsA("Player"), `[{script.Name}] Except must be Player`)
+        Excluded[Except] = true
+    elseif type(Except) == "table" then
+        for _, Player in Except do
+            assert(typeof(Player) == "Instance" and Player:IsA("Player"), 
+                `[{script.Name}] Invalid player in exclusion list`)
+            Excluded[Player] = true
+        end
+    else
+        error(`[{script.Name}] Except must be Player`)
+    end
+
+    for _, Player in Players:GetPlayers() do
+        if not Excluded[Player] then
+            Fetched:FireClient(Player, ...)
+        end
+    end
 end
 
 function NetworkRegistry.OnInvoke(self: NetworkRegistry, PacketName: string, Callback: (...any) -> any?)
