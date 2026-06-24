@@ -3,7 +3,7 @@
 --[[
 	FiniteStateMachine: Finite state machine inspired by the Unreal Engine FSM
 	Author: Jaeymo
-	Version: 1.1.0
+	Version: 2.0.0
 	License: MIT
 	Created: 10/12/2025
 
@@ -12,8 +12,7 @@
 
 local RunService = game:GetService("RunService")
 
-local GeneralUtil = require(script.Parent["general-util"])
-local Trove = require(script.Parent["trove"])
+local Janitor = require(script.Parent.Janitor)
 
 --[=[
 	@class FiniteStateMachine
@@ -23,23 +22,78 @@ local Trove = require(script.Parent["trove"])
 local FiniteStateMachine = {}
 FiniteStateMachine.__index = FiniteStateMachine
 
+type NamingConvention = {
+	OnEnter: string,
+	OnExit: string,
+	OnUpdate: string,
+}
+
+export type Janitor = Janitor.Janitor
+
+export type FSMConfig = {
+	NamingConvention: {
+		OnEnter: string?,
+		OnExit: string?,
+		OnUpdate: string?,
+	}?
+}
+
 export type State = {
 	OnEnter: ((self: State) -> ())?,
 	OnExit: ((self: State) -> ())?,
-	Update: ((self: State, DeltaTime: number) -> ())?,
+	OnUpdate: ((self: State, dt: number) -> ())?,
 }
 
-export type FiniteStateMachine = typeof(setmetatable({} :: {
-	StartupMethod: string?,
-    States: { [string]: State },
-    Transitions: { [string]: {ToState: string, Conditional: () -> boolean}},
+export type Transition<T> = {
+	ToState: T,
+	Conditional: () -> boolean,
+}
+
+export type FiniteStateMachine<T> = typeof(setmetatable({} :: {
+    States: { [T]: State },
+    
+	Transitions: { [T]: {Transition<T>} },
+
     IsActive: boolean,
     Context: any,
 
-	InitialState: string?,
-	CurrentState: string?,
-	Trove: Trove.Trove,
+	InitialState: T?,
+	CurrentState: T?,
+
+	Janitor: Janitor,
+
+	_namingConvention: {
+		OnEnter: string,
+		OnExit: string,
+		OnUpdate: string,
+	}
 }, FiniteStateMachine))
+
+ --[=[
+	@priv
+]=]
+local function safeCall<T>(Data: T, Fn: string, ...: any): ...any
+	if typeof(Data) == "table" and typeof((Data :: any)[Fn]) == "function" then
+		return (Data :: any)[Fn](...)
+	end
+
+	return
+end
+
+--[=[
+	@priv
+]=]
+local function resolveNamingConvention(convention: {
+	OnEnter: string?,
+	OnExit: string?,
+	OnUpdate: string?
+}?): NamingConvention
+	return {
+		OnEnter = convention and convention.OnEnter or "OnEnter",
+		OnExit = convention and convention.OnExit or "OnExit",
+		OnUpdate = convention and convention.OnUpdate or "OnUpdate",
+	}
+end
 
  --[=[
 	@return FiniteStateMachine
@@ -49,14 +103,14 @@ export type FiniteStateMachine = typeof(setmetatable({} :: {
 	local fsm = FiniteStateMachine.new()
 	```
 ]=]
-function FiniteStateMachine.new(StartupMethod: string?): FiniteStateMachine
+function FiniteStateMachine.new<T>(Config: FSMConfig?): FiniteStateMachine<T>
 	return setmetatable({
-		StartupMethod = StartupMethod,
 		States = {},
 		Transitions = {},
 		IsActive = false,
-		Trove = Trove.new(),
-	}, FiniteStateMachine)
+		Janitor = Janitor.new(),
+		_namingConvention = resolveNamingConvention(Config and Config.NamingConvention),
+	}, FiniteStateMachine) :: FiniteStateMachine<T>
 end
 
 --[=[
@@ -66,21 +120,25 @@ end
 	Sets the context to be given to the state tables.
 
 	```lua
-	local context = { foo = 1, }
+	local context = { 
+		foo = 1,
+	}
 
-	-- both work
+	-- this works
 	fsm:SetContext(context)
+
+	-- this also works
 	fsm.Context = context
 	```
 ]=]
-function FiniteStateMachine.SetContext(self: FiniteStateMachine, Context: any)
+function FiniteStateMachine.SetContext<T>(self: FiniteStateMachine<T>, Context: any)
     self.Context = Context
 end
 
 --[=[
-	@method GetState
+	@method GetCurrentState
 	@within FiniteStateMachine
-	@return string?
+	@return T?
 	Gets the currently active state.
 
 	```lua
@@ -89,15 +147,23 @@ end
 	local state = fsm:GetState() -- "Idle"
 	```
 ]=]
-function FiniteStateMachine.GetState(self: FiniteStateMachine): string?
+function FiniteStateMachine.GetCurrentState<T>(self: FiniteStateMachine<T>): T?
 	return self.CurrentState
+end
+
+--[=[
+	@method GetState
+	@within FiniteStateMachine
+	@return: State?
+]=]
+function FiniteStateMachine.GetState<T>(self: FiniteStateMachine<T>, stateName: T): State?
+	return self.States[stateName]
 end
 
 --[=[
 	@method RegisterStatesIn
 	@within FiniteStateMachine
 	@param Ancestor Instance
-	@param DefaultState string?
 	Registers state modules under an instance.
 
 	```lua
@@ -105,30 +171,29 @@ end
 	fsm:RegisterStatesIn(StatesContainer)
 	```
 ]=]
-function FiniteStateMachine.RegisterStatesIn(self: FiniteStateMachine, Ancestor: Instance, DefaultState: string?)
-	for _, Descendant in Ancestor:GetDescendants() do
-		if self.States[Descendant.Name] then
-			warn(`[{script.Name}] Cannot have multiple states with the same name: {Descendant.Name}`)
+function FiniteStateMachine.RegisterStatesIn<T>(self: FiniteStateMachine<T>, ancestor: Instance)
+	for _, descendant in ancestor:GetDescendants() do
+		if self.States[descendant.Name] then
+			warn(`[{script.Name}] Cannot have multiple states with the same name: {descendant.Name}`)
 			continue
 		end
 
-		if not Descendant:IsA("ModuleScript") then
+		if not descendant:IsA("ModuleScript") then
 			continue
 		end
 
-		local State = require(Descendant)
-		self:RegisterState(Descendant.Name, State)
+		self:RegisterState(descendant.Name, (require :: any)(descendant))
 	end
 
-	self.InitialState = DefaultState or self.InitialState or next(self.States)
+	self.InitialState = self.InitialState or next(self.States)
 end
 
 --[=[
 	@method RegisterState
 	@within FiniteStateMachine
-	@param StateName string
-	@param State State
-	Registers a state internally and calls the StartupMethod if applicable.
+	@param stateName T
+	@param state State
+	Registers a state internally
 
 	```lua
 	local StatesContainer = ReplicatedStorage.StateModules
@@ -137,37 +202,51 @@ end
 	fsm:RegisterState(StateModule)
 	```
 ]=]
-function FiniteStateMachine.RegisterState(self: FiniteStateMachine, StateName: string, State: State)
-	if self.States[StateName] then warn(`[{script.Name}] A state with the name {StateName} is already registered`) return end
+function FiniteStateMachine.RegisterState<T>(self: FiniteStateMachine<T>, stateName: T, state: State)
+	if self.States[stateName] then 
+		warn(`[{script.Name}] A state with the name "{stateName}" is already registered`) 
+		return 
+	end
 
-	self.States[StateName] = State
-	GeneralUtil.SafeCall(State, self.StartupMethod, State, self.Context)
+	self.States[stateName] = state
 
 	if not self.InitialState then
-		self.InitialState = StateName
+		self.InitialState = stateName
 	end
 end
 
 --[=[
 	@method Start
 	@within FiniteStateMachine
-	@param StartingState string?
+	@param startingState string?
 	Starts the FSM.
 
 	```lua
 	fsm:Start("Idle")
 	```
 ]=]
-function FiniteStateMachine.Start(self: FiniteStateMachine, StartingState: string?)
-	if self.IsActive then return end
+function FiniteStateMachine.Start<T>(self: FiniteStateMachine<T>, startingState: T?)
+	if self.IsActive then 
+		return 
+	end
 
-	self.Trove:Add(RunService.Heartbeat:Connect(function(DeltaTime: number)
-		if not self.IsActive then return end
-		self:_update(DeltaTime)
+	self.Janitor:Add(RunService.Heartbeat:Connect(function(dt: number)
+		if not self.IsActive then
+			return
+		end
+
+		self:_update(dt)
 	end))
 
 	self.IsActive = true
-	self:ChangeState(StartingState or self.InitialState :: string)
+
+	if not self.InitialState and not startingState then
+		warn(`[{script.Name}] Must set an initial/starting state!`)
+		self:Stop()
+		return
+	end
+	
+	self:SetState(startingState or self.InitialState)
 end
 
 --[=[
@@ -183,47 +262,60 @@ end
 	fsm:Stop()
 	```
 ]=]
-function FiniteStateMachine:Stop()
-	if not self.IsActive then return end
+function FiniteStateMachine.Stop<T>(self: FiniteStateMachine<T>)
+	if not self.IsActive then
+		return
+	end
 
-	self.Trove:Clean()
+	if self.CurrentState and self.States[self.CurrentState] then
+		safeCall(self.States[self.CurrentState], self._namingConvention.OnExit, self.States[self.CurrentState])
+	end
+
+	self.Janitor:Cleanup()
 
 	self.IsActive = false
 	self.CurrentState = nil
 end
 
 --[=[
-	@method ChangeState
+	@method SetState
 	@within FiniteStateMachine
-	@param NewStateName string
+	@param newStateName string
 	Changes to a new FSM state.
 
 	```lua
-	fsm:ChangeState("Idle")
+	fsm:SetState("Idle")
 
 	task.wait(2)
 
-	fsm:ChangeState("Moving")
+	fsm:SetState("Moving")
 	```
 ]=]
-function FiniteStateMachine.ChangeState(self: FiniteStateMachine, NewStateName: string)
-	if self.CurrentState then
-		local OldState = self.States[self.CurrentState]
-		GeneralUtil.SafeCall(OldState, "OnExit", OldState)
+function FiniteStateMachine.SetState<T>(self: FiniteStateMachine<T>, newStateName: T)
+	local newStateProfile = self.States[newStateName]
+	if not newStateProfile then
+		error(`[{script.Name}] State "{newStateName}" is not registered`)
 	end
 
-	self.CurrentState = NewStateName
+	if self.CurrentState == newStateName then
+		return
+	end
 
-	local NewStateProfile = self.States[NewStateName]
-	GeneralUtil.SafeCall(NewStateProfile, "OnEnter", NewStateProfile)
+	if self.CurrentState then
+		local oldState = self.States[self.CurrentState]
+		safeCall(oldState, self._namingConvention.OnExit, oldState)
+	end
+
+	self.CurrentState = newStateName
+	safeCall(newStateProfile, self._namingConvention.OnEnter, newStateProfile)
 end
 
 --[=[
 	@method AddTransition
 	@within FiniteStateMachine
-	@param FromState string
-	@param ToState string
-	@param Conditional () -> boolean
+	@param fromState string
+	@param toState string
+	@param conditional () -> boolean
 	Adds a conditional transition between states.
 
 	```lua
@@ -236,43 +328,52 @@ end
 	end)
 	```
 ]=]
-function FiniteStateMachine:AddTransition(FromState: string, ToState: string, Conditional: () -> boolean)
-	if not self.Transitions[FromState] then
-		self.Transitions[FromState] = {}
+function FiniteStateMachine.AddTransition<T>(self: FiniteStateMachine<T>, fromState: T, toState: T, conditional: () -> boolean)
+	if not self.Transitions[fromState] then
+		self.Transitions[fromState] = {}
 	end
 
-	table.insert(self.Transitions[FromState], {ToState = ToState, Conditional = Conditional})
+	table.insert(self.Transitions[fromState], {ToState = toState, Conditional = conditional})
 end
 
 --[=[
 	@method Destroy
 	@within FiniteStateMachine
-	Destroys the FSM.
+	Destroys the FSM and renders it useless.
 
 	```lua
 	fsm:Destroy()
 	```
 ]=]
-function FiniteStateMachine:Destroy()
-	self.Trove:Destroy()
-	table.clear(self :: any)
-	setmetatable(self :: any, nil)
+function FiniteStateMachine.Destroy<T>(self: FiniteStateMachine<T>)
+	self:Stop()
+	self.Janitor:Cleanup()
+
+	table.clear(self)
+	setmetatable(self, nil)
 end
 
-function FiniteStateMachine:_update(DeltaTime: number)
-	if not self.CurrentState then return end
-	if not self.States[self.CurrentState] then return end
+function FiniteStateMachine._update<T>(self: FiniteStateMachine<T>, dt: number)
+	if not self.CurrentState then 
+		return 
+	end
 
-	local State = self.States[self.CurrentState]
-	GeneralUtil.SafeCall(State, "Update", State, DeltaTime)
+	if not self.States[self.CurrentState] then 
+		return 
+	end
 
-	local StateTransitions = self.Transitions[self.CurrentState]
-	if StateTransitions then
-		for _, ToStateData in ipairs(StateTransitions) do
-			if ToStateData.Conditional and ToStateData.Conditional() then
-				self:ChangeState(ToStateData.ToState)
-				break
-			end
+	local state = self.States[self.CurrentState]
+	safeCall(state, self._namingConvention.OnUpdate, state, dt)
+
+	local stateTransitions = self.Transitions[self.CurrentState] :: {Transition<T>}
+	if not stateTransitions then
+		return
+	end
+
+	for _, toStateData in stateTransitions do
+		if toStateData.Conditional() then
+			self:SetState(toStateData.ToState)
+			break
 		end
 	end
 end
