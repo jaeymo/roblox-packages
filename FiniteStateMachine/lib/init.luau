@@ -3,7 +3,7 @@
 --[[
 	FiniteStateMachine: Finite state machine inspired by the Unreal Engine FSM
 	Author: Jaeymo
-	Version: 2.0.0
+	Version: 2.1.0
 	License: MIT
 	Created: 10/12/2025
 
@@ -49,15 +49,15 @@ export type Transition<T> = {
 	Conditional: () -> boolean,
 }
 
-export type FiniteStateMachine<T> = typeof(setmetatable({} :: {
-    States: { [T]: State },
-    
+export type FSMProperties<T> = {
+	States: { [T]: State },
+
 	Transitions: { [T]: {Transition<T>} },
 
-    IsActive: boolean,
-    Context: any,
+	IsActive: boolean,
+	Context: any,
 
-	InitialState: T?,
+	InitialState: T,
 	CurrentState: T?,
 
 	Janitor: Janitor,
@@ -67,7 +67,35 @@ export type FiniteStateMachine<T> = typeof(setmetatable({} :: {
 		OnExit: string,
 		OnUpdate: string,
 	}
-}, FiniteStateMachine))
+}
+
+export type FiniteStateMachine<T> = FSMProperties<T> & {
+	__index: FiniteStateMachine<T>,
+
+	SetContext: (self: FiniteStateMachine<T>, Context: any) -> (),
+
+	GetCurrentState: (self: FiniteStateMachine<T>) -> T?,
+	GetStateProfile: (self: FiniteStateMachine<T>, stateName: T) -> State?,
+
+	RegisterStatesIn: (self: FiniteStateMachine<T>, ancestor: Instance) -> (),
+	RegisterState: (self: FiniteStateMachine<T>, stateName: T, state: State) -> (),
+
+	Start: (self: FiniteStateMachine<T>, startingState: T?) -> (),
+	Stop: (self: FiniteStateMachine<T>) -> (),
+
+	SetState: (self: FiniteStateMachine<T>, stateName: T) -> (),
+
+	AddTransition: (
+		self: FiniteStateMachine<T>,
+		fromState: T,
+		toState: T,
+		conditional: () -> boolean
+	) -> (),
+
+	Destroy: (self: FiniteStateMachine<T>) -> (),
+
+	_update: (self: FiniteStateMachine<T>, dt: number) -> (),
+}
 
  --[=[
 	@priv
@@ -100,15 +128,19 @@ end
 	Constructs a FSM object.
 
 	```lua
-	local fsm = FiniteStateMachine.new()
+	type State = "Idle" | "Moving"
+
+	local initialState: State = "Idle"
+	local fsm = FiniteStateMachine.new(initialState)
 	```
 ]=]
-function FiniteStateMachine.new<T>(Config: FSMConfig?): FiniteStateMachine<T>
+function FiniteStateMachine.new<T>(InitialState: T, Config: FSMConfig?): FiniteStateMachine<T>
 	return setmetatable({
 		States = {},
 		Transitions = {},
 		IsActive = false,
 		Janitor = Janitor.new(),
+		InitialState = InitialState,
 		_namingConvention = resolveNamingConvention(Config and Config.NamingConvention),
 	}, FiniteStateMachine) :: FiniteStateMachine<T>
 end
@@ -152,11 +184,12 @@ function FiniteStateMachine.GetCurrentState<T>(self: FiniteStateMachine<T>): T?
 end
 
 --[=[
-	@method GetState
+	@method GetStateProfile
 	@within FiniteStateMachine
+	@param stateName: T
 	@return: State?
 ]=]
-function FiniteStateMachine.GetState<T>(self: FiniteStateMachine<T>, stateName: T): State?
+function FiniteStateMachine.GetStateProfile<T>(self: FiniteStateMachine<T>, stateName: T): State?
 	return self.States[stateName]
 end
 
@@ -182,17 +215,15 @@ function FiniteStateMachine.RegisterStatesIn<T>(self: FiniteStateMachine<T>, anc
 			continue
 		end
 
-		self:RegisterState(descendant.Name, (require :: any)(descendant))
+		self:RegisterState(descendant.Name :: any, (require :: any)(descendant))
 	end
-
-	self.InitialState = self.InitialState or next(self.States)
 end
 
 --[=[
 	@method RegisterState
 	@within FiniteStateMachine
 	@param stateName T
-	@param state State
+	@param stateProfile State
 	Registers a state internally
 
 	```lua
@@ -202,13 +233,13 @@ end
 	fsm:RegisterState(StateModule)
 	```
 ]=]
-function FiniteStateMachine.RegisterState<T>(self: FiniteStateMachine<T>, stateName: T, state: State)
+function FiniteStateMachine.RegisterState<T>(self: FiniteStateMachine<T>, stateName: T, stateProfile: State)
 	if self.States[stateName] then 
 		warn(`[{script.Name}] A state with the name "{stateName}" is already registered`) 
 		return 
 	end
 
-	self.States[stateName] = state
+	self.States[stateName] = stateProfile
 
 	if not self.InitialState then
 		self.InitialState = stateName
@@ -218,14 +249,14 @@ end
 --[=[
 	@method Start
 	@within FiniteStateMachine
-	@param startingState string?
+	@param initialState string?
 	Starts the FSM.
 
 	```lua
 	fsm:Start("Idle")
 	```
 ]=]
-function FiniteStateMachine.Start<T>(self: FiniteStateMachine<T>, startingState: T?)
+function FiniteStateMachine.Start<T>(self: FiniteStateMachine<T>, initialState: T?)
 	if self.IsActive then 
 		return 
 	end
@@ -240,13 +271,14 @@ function FiniteStateMachine.Start<T>(self: FiniteStateMachine<T>, startingState:
 
 	self.IsActive = true
 
-	if not self.InitialState and not startingState then
+	if not self.InitialState and not initialState then
 		warn(`[{script.Name}] Must set an initial/starting state!`)
 		self:Stop()
 		return
 	end
 	
-	self:SetState(startingState or self.InitialState)
+	local state = (initialState or self.InitialState) :: T
+	self:SetState(state)
 end
 
 --[=[
