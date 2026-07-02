@@ -1,9 +1,9 @@
 --!strict
 
 --[[
-	GeneralUtil: A module containing observer methods
+	Viewer: Observer methods for instances
 	Author: jaeymo
-	Version: 0.1.0
+	Version: 1.0.0
 	License: MIT
 	Created: 09/09/2025
 
@@ -20,9 +20,15 @@
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠉⠙⠛⠛⠙⠋⠉⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ]]
 
-local Viewer = {}
-
 local CollectionService = game:GetService("CollectionService")
+
+local Viewer = {
+	Version = "1.0.0",
+}
+
+type Viewer = typeof(Viewer)
+
+type UnionCallback<T> = { T } | (T) -> ()
 
 --[=[
 	@function wrapCallback
@@ -40,7 +46,7 @@ local CollectionService = game:GetService("CollectionService")
 	callback("item") -- Adds "item" to list
 	```
 ]=]
-local function wrapCallback<T>(callback: { T } | (T) -> (), reverse: boolean?): (T) -> ()
+local function wrapCallback<T>(callback: UnionCallback<T>, reverse: boolean?): (T) -> ()
 	if type(callback) == "function" then
 		return callback :: (T) -> ()
 	else
@@ -67,7 +73,7 @@ end
 	@within Viewer
 	@param tag string
 	@param reverse boolean
-	@param callback { Instance } | (Instance) -> ()
+	@param callback { T } | (T) -> ()
 	@param mustBeDescendantOf Instance?
 	@return RBXScriptConnection
 	
@@ -77,12 +83,12 @@ end
 	```lua
 	local Viewer = require(script)
 	
-	local connection = Viewer.WatchTag("Enemy", false, function(instance)
+	local connection = Viewer:WatchTag("Enemy", false, function(instance)
 		print("Added:", instance.Name)
 	end)
 	```
 ]=]
-function Viewer.WatchTag(tag: string, reverse: boolean, callback: { Instance } | (Instance) -> (), mustBeDescendantOf: Instance?): RBXScriptConnection
+function Viewer.WatchTag<T>(_self: Viewer, tag: string, reverse: boolean, callback: UnionCallback<T>, mustBeDescendantOf: Instance?): RBXScriptConnection
 	assert(callback ~= nil, "Callback parameter is missing, did you forget your reverse parameter?")
 	local func = wrapCallback(callback, reverse)
 
@@ -109,7 +115,7 @@ end
 	@function WatchDescendants
 	@within Viewer
 	@param object Instance
-	@param callback { Instance? } | (Instance) -> ()
+	@param callback { T } | (T) -> ()
 	@param ignoreInitial boolean?
 	@return RBXScriptConnection
 	
@@ -120,12 +126,12 @@ end
 	
 	local folder = Instance.new("Folder")
 	
-	local connection = Viewer.WatchDescendants(folder, function(descendant)
+	local connection = Viewer:WatchDescendants(folder, function(descendant)
 		print("Descendant added:", descendant.Name)
 	end)
 	```
 ]=]
-function Viewer.WatchDescendants(object: Instance, callback: { Instance? } | (Instance) -> (), ignoreInitial: boolean?): RBXScriptConnection
+function Viewer.WatchDescendants<T>(_self: Viewer, object: Instance, callback: UnionCallback<T>, ignoreInitial: boolean?): RBXScriptConnection
 	local func = wrapCallback(callback)
 	
 	if not ignoreInitial then
@@ -142,7 +148,7 @@ end
 	@within Viewer
 	@param object Instance
 	@param attributeName string
-	@param callback { any? } | (any) -> ()
+	@param callback { T } | (T) -> ()
 	@param ignoreInitial boolean?
 	
 	@return RBXScriptConnection
@@ -156,12 +162,12 @@ end
 	local part = Instance.new("Part")
 	part:SetAttribute("Health", 100)
 	
-	local connection = Viewer.WatchAttribute(part, "Health", function(value)
+	local connection = Viewer:WatchAttribute(part, "Health", function(value)
 		print("Health changed to:", value)
 	end)
 	```
 ]=]
-function Viewer.WatchAttribute(object: Instance, attributeName: string, callback: { any? } | (any) -> (), ignoreInitial: boolean?): RBXScriptConnection
+function Viewer.WatchAttribute(_self: Viewer, object: Instance, attributeName: string, callback: { any? } | (any) -> (), ignoreInitial: boolean?): RBXScriptConnection
 	local func = wrapCallback(callback)
 	local current = object:GetAttribute(attributeName)
 	
@@ -178,7 +184,7 @@ end
 	@function WatchValue
 	@within Viewer
 	@param valueObject Instance
-	@param callback { any? } | (any) -> ()
+	@param callback { T } | (T) -> ()
 	@param ignoreInitial boolean?
 	@return RBXScriptConnection
 	
@@ -191,12 +197,12 @@ end
 	local intValue = Instance.new("IntValue")
 	intValue.Value = 42
 	
-	local connection = Viewer.WatchValue(intValue, function(value)
+	local connection = Viewer:WatchValue(intValue, function(value)
 		print("Value changed to:", value)
 	end)
 	```
 ]=]
-function Viewer.WatchValue(valueObject: Instance, callback: { any? } | (any) -> (), ignoreInitial: boolean?): RBXScriptConnection
+function Viewer.WatchValue<T>(valueObject: Instance, callback: UnionCallback<T>, ignoreInitial: boolean?): RBXScriptConnection
 	local typedValueObject = valueObject :: Instance & { Value: any }
 	local func = wrapCallback(callback)
 	

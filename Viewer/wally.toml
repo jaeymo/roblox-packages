@@ -1,8 +1,8 @@
 [package]
 name = "jaeymo/viewer"
-description = "Module containing observer methods"
-version = "0.1.0"
+description = "Observor methods for instances"
 license = "MIT"
-authors = ["jaeymo"]
+authors = ["Jaeymo <jaey.cyber@gmail.com>"]
+version = "1.0.0"
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"
