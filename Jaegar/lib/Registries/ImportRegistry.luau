@@ -134,15 +134,11 @@ function ImportRegistry.Prepare(self: ImportRegistry)
 
 	local function handleCall(import: any)
 		if type(import) == "table" then
-			local s, e = pcall(function()
+			pcall(function()
 				if import[STARTUP_METHOD] then
 					import[STARTUP_METHOD]()
 				end
 			end)
-
-			if not s then
-				warn(e)
-			end
 		end
 	end
 
