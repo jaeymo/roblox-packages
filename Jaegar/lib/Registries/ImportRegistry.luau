@@ -136,7 +136,7 @@ function ImportRegistry.Prepare(self: ImportRegistry)
 		if type(import) == "table" then
 			pcall(function()
 				if import[STARTUP_METHOD] then
-					import[STARTUP_METHOD]()
+					import[STARTUP_METHOD](import)
 				end
 			end)
 		end
