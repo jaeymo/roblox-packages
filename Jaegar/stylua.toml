@@ -1,0 +1,10 @@
+quote_style = "AutoPreferDouble"
+call_parentheses = "Always"
+line_endings = "Unix"
+indent_type = "Tabs"
+column_width = 120
+indent_width = 4
+syntax = "Luau"
+
+[sort_requires]
+enabled = true

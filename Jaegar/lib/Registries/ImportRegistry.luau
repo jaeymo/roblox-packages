@@ -1,153 +1,176 @@
 --!strict
-local Root = script.Parent.Parent
+local root = script.Parent.Parent
 
-local Types = require(Root.Data.Types)
+local Settings = require(root.Data.Settings)
+local Types = require(root.Data.Types)
 
-local LOAD_WARNING_TIME = 15
+-- How much time must pass for a load warning to be logged
+local LOAD_WARNING_TIME = Settings.LoadWarningTime
+
+-- The name for the method called in modules when loading
+local STARTUP_METHOD = Settings.StartupMethod
+
+-- Should we use task.spawn() for start methods? Or should it be deterministic? You choose!
+local PARALLEL_STARTUP = Settings.ParallelStartup
 
 type LoadMetric = Types.LoadMetric
 type ImportType = Types.ImportType
 
 local ImportRegistry = {
-    CachedImports = {},
-    Controllers = {},
-    Services = {},
-    LoadMetrics = {} :: { Types.LoadMetric },
+	LoadMetrics = {} :: { Types.LoadMetric },
+	CachedImports = {} :: { any },
+
+	Controllers = {} :: { [string]: any },
+	Services = {} :: { [string]: any },
 }
 
 export type ImportRegistry = typeof(ImportRegistry)
 
-local function TimedRequire(Module: ModuleScript): (boolean, any, number, boolean)
-    local StartTime = os.clock()
-    local Warned = false
-    local Finished = false
+local function timedRequire(module: ModuleScript): (boolean, any, number, boolean)
+	LOAD_WARNING_TIME = Settings.LoadWarningTime
 
-    task.delay(LOAD_WARNING_TIME, function()
-        if not Finished then
-            Warned = true
-            warn(string.format(
-                "[ImportRegistry] Module taking longer than %ds to load: %s",
-                LOAD_WARNING_TIME,
-                Module:GetFullName()
-            ))
-        end
-    end)
+	local startTime = os.clock()
+	local warned = false
+	local finished = false
 
-    local Success, Result = pcall(require, Module)
-    Finished = true
+	task.delay(LOAD_WARNING_TIME, function()
+		if not finished then
+			warned = true
+			warn(
+				string.format(
+					"[ImportRegistry] Module taking longer than %ds to load: %s",
+					LOAD_WARNING_TIME,
+					module:GetFullName()
+				)
+			)
+		end
+	end)
 
-    local Elapsed = os.clock() - StartTime
-    return Success, Result, Elapsed, Warned
+	local success, result = pcall(require, module)
+	finished = true
+
+	return success, result, os.clock() - startTime, warned
 end
 
-local function Verify(Import: any): boolean
-    return type(Import) == "table"
+local function request(container: Instance)
+	for _, import in container:GetChildren() do
+		if import == root or import:IsDescendantOf(root) then
+			continue
+		end
+
+		if import:IsA("ModuleScript") then
+			local success, cached, timeTaken, warned = timedRequire(import)
+
+			table.insert(ImportRegistry.LoadMetrics, {
+				Name = import.Name,
+				Path = import:GetFullName(),
+				Time = timeTaken,
+				Warned = warned,
+			})
+
+			if success and type(cached) == "table" and not table.find(ImportRegistry.CachedImports, cached) then
+				table.insert(ImportRegistry.CachedImports, cached)
+			elseif not success then
+				warn(
+					string.format("[ImportRegistry] Failed to require %s:\n%s", import:GetFullName(), tostring(cached))
+				)
+			end
+		end
+
+		if #import:GetChildren() > 0 then
+			request(import)
+		end
+	end
 end
 
-local function Request(Container: Instance)
-    for _, Import in ipairs(Container:GetChildren()) do
-        if Import == Root or Import:IsDescendantOf(Root) then
-            continue
-        end
-
-        if Import:IsA("ModuleScript") then
-            local Success, Cached, TimeTaken, Warned = TimedRequire(Import)
-
-            table.insert(ImportRegistry.LoadMetrics, {
-                Name = Import.Name,
-                Path = Import:GetFullName(),
-                Time = TimeTaken,
-                Warned = Warned,
-            })
-
-            if Success and Verify(Cached)
-                and type(Cached.jaegarInit) == "function"
-                and not table.find(ImportRegistry.CachedImports, Cached)
-            then
-                table.insert(ImportRegistry.CachedImports, Cached)
-            elseif not Success then
-                warn(Import, Cached)
-            end
-        end
-
-        if #Import:GetChildren() > 0 then
-            Request(Import)
-        end
-    end
+local function getStorageLocation(importType: ImportType): { [string]: any }
+	return (importType == "Service" and ImportRegistry.Services) or ImportRegistry.Controllers
 end
 
-local function GetStorageLocation(ImportType: ImportType): { [string]: any }
-    return (ImportType == "Service" and ImportRegistry.Services) or ImportRegistry.Controllers
+function ImportRegistry.Bootstrap(_self: ImportRegistry, directories: Instance | { Instance })
+	if typeof(directories) == "Instance" then
+		request(directories :: Instance)
+	elseif typeof(directories) == "table" then
+		for _, Directory in directories do
+			if typeof(Directory) == "Instance" then
+				request(Directory)
+			else
+				warn(`[{script.Name}] Invalid directory type in bootstrapping list: {typeof(Directory)}`)
+			end
+		end
+	else
+		error(`[{script.Name}] Bootstrapping process expects an instance or a table of instances`)
+	end
 end
 
-function ImportRegistry.Bootstrap(self: ImportRegistry, Directories: Instance | { Instance })
-    if typeof(Directories) == "Instance" then
-        Request(Directories :: Instance)
-    elseif typeof(Directories) == "table" then
-        for _, Directory in Directories do
-            if typeof(Directory) == "Instance" then
-                Request(Directory)
-            else
-                warn(`[{script.Name}] Invalid directory type in bootstrapping list: {typeof(Directory)}`)
-            end
-        end
-    else
-        error(`[{script.Name}] Bootstrapping process expects an instance or a table of instances`)
-    end
+function ImportRegistry.Create(_self: ImportRegistry, importType: ImportType, identifier: string, import: any): any
+	if type(import) ~= "table" then
+		error(`[{script.Name}] Invalid import type (expected table): {identifier}`)
+	end
+
+	local storageLocation = getStorageLocation(importType)
+	if storageLocation[identifier] then
+		warn(`[{script.Name}] Duplicate registration: {identifier}`)
+		return nil
+	end
+
+	storageLocation[identifier] = import
+	return import
 end
 
-function ImportRegistry.Create(self: ImportRegistry, ImportType: ImportType, Identifier: string, Import: any): any
-    if not Verify(Import) then
-        error(`[{script.Name}] Invalid import type: {Identifier}`)
-    end
+function ImportRegistry.Catch(_self: ImportRegistry, importType: ImportType, identifier: string): any
+	local storageLocation = getStorageLocation(importType)
+	if not storageLocation[identifier] then
+		warn(`[{script.Name}] Import has not been registered: {identifier}`)
+		return nil
+	end
 
-    local StorageLocation = GetStorageLocation(ImportType)
-    if StorageLocation[Identifier] then
-        warn(`[{script.Name}] Duplicate registration: {Identifier}`)
-        return nil
-    end
-
-    StorageLocation[Identifier] = Import
-    return Import
-end
-
-function ImportRegistry.Catch(self: ImportRegistry, ImportType: ImportType, Identifier: string): any
-    local StorageLocation = GetStorageLocation(ImportType)
-    if not StorageLocation[Identifier] then
-        warn(`[{script.Name}] Import has not been registered: {Identifier}`)
-        return nil
-    end
-
-    return StorageLocation[Identifier]
+	return storageLocation[identifier]
 end
 
 function ImportRegistry.Prepare(self: ImportRegistry)
-    for _, Import in self.CachedImports do
-        task.spawn(function()
-            Import:jaegarInit()
-        end)
-    end
+	STARTUP_METHOD = Settings.StartupMethod
+	PARALLEL_STARTUP = Settings.ParallelStartup
+
+	local function handleCall(import: any)
+		if type(import) == "table" then
+			local s, e = pcall(function()
+				if import[STARTUP_METHOD] then
+					import[STARTUP_METHOD]()
+				end
+			end)
+
+			if not s then
+				warn(e)
+			end
+		end
+	end
+
+	for _, import in self.CachedImports do
+		if PARALLEL_STARTUP then
+			task.spawn(function()
+				handleCall(import)
+			end)
+		else
+			handleCall(import)
+		end
+	end
 end
 
 function ImportRegistry.SimpleOutput(self: ImportRegistry)
-    print(self.LoadMetrics)
+	print(self.LoadMetrics)
 end
 
 function ImportRegistry.PrintLoadReport(self: ImportRegistry)
-    table.sort(self.LoadMetrics, function(A: LoadMetric, B: LoadMetric)
-        return A.Time > B.Time
-    end)
+	table.sort(self.LoadMetrics, function(A: LoadMetric, B: LoadMetric)
+		return A.Time > B.Time
+	end)
 
-    print("===== Import Load Report =====")
-    for _, Metric in self.LoadMetrics do
-        print(string.format(
-            "%s | %.3fs | %s",
-            Metric.Name,
-            Metric.Time,
-            Metric.Warned and "SLOW" or "OK"
-        ))
-    end
-    print("==============================")
+	print("===== Import Load Report =====")
+	for _, Metric in self.LoadMetrics do
+		print(string.format("%s | %.3fs | %s", Metric.Name, Metric.Time, Metric.Warned and "SLOW" or "OK"))
+	end
+	print("==============================")
 end
 
 return ImportRegistry

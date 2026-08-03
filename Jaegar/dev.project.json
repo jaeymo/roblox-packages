@@ -1,34 +1,28 @@
 {
-  "name": "jaegar",
-  "servePlaceIds": [
-    104082384435793
-  ],
-  
-  "tree": {
-    "$className": "DataModel",
+    "name": "jaegar",
 
-    "ReplicatedStorage": {
-      "jaegar": {
-        "$path": "lib"
-      },
+    "tree": {
+        "$className": "DataModel",
+        "ReplicatedStorage": {
+            "Packages": {
+                "$path": "Packages",
+                "Jaegar": {
+                    "$path": "lib"
+                }
+            }
+        },
 
-      "Packages": {
-        "$path": "Packages"
-      }
-    },
+        "ServerScriptService": {
+            "testing": {
+                "$path": "test/Server"
+            }
+        },
 
-    "ServerScriptService": {
-      "Server": {
-        "$path": "test/Server"
-      }
-    },
-
-    "StarterPlayer": {
-      "StarterPlayerScripts": {
-        "Client": {
-          "$path": "test/Client"
+        "StarterPlayer": {
+          "StarterPlayerScripts": {
+            "$className": "StarterPlayerScripts",
+            "$path": "test/Client"
+          }
         }
-      }
     }
-  }
 }

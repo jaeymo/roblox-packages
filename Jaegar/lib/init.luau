@@ -3,7 +3,7 @@
 --[[
 	Jaegar: A lightweight game framework
 	Author: jaeymo
-	Version: 1.6.1
+	Version: 1.7.0
 	License: MIT
 	Created: 09/28/2025
 	
@@ -17,8 +17,9 @@ local Types = require(script.Data.Types)
 local IS_SERVER = RunService:IsServer()
 local IS_RUNNING = RunService:IsRunning()
 
-local Jaegar = {}
-Jaegar.Version = "1.6.1"
+local Jaegar = {
+	Version = "1.7.0"
+}
 
 --[=[
 	@method Server
@@ -34,7 +35,7 @@ function Jaegar:Server(): Types.JaegarServer
 		error(`[{script.Name}] Cannot call :Server() on the client!`)
 	end
 
-	return require(script.Process.JaegarServer)
+	return (require)(script.Process.JaegarServer)
 end
 
 --[=[
@@ -56,7 +57,7 @@ function Jaegar:Client(): Types.JaegarClient
 		JaegarServer:Destroy()
 	end
 
-	return require(script.Process.JaegarClient)
+	return (require)(script.Process.JaegarClient)
 end
 
 return Jaegar

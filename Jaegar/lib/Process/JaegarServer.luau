@@ -3,16 +3,24 @@ local Root = script.Parent.Parent
 local Registries = Root.Registries
 
 local ImportRegistry = require(Registries.ImportRegistry)
-local Types = require(Root.Data.Types)
 local Promise = require(Root.Parent.Promise)
+local Types = require(Root.Data.Types)
+
 local Shared = require(script.Parent.Shared) :: Types.SharedModule
 
-local JaegarServer: Types.JaegarServer = {
-    ImportRegistry = (ImportRegistry::any) :: Types.ImportRegistry,
-} :: any
-setmetatable(JaegarServer, {__index = Shared})
+local initialized = false
 
-local Initialized = false
+--[=[
+	@module JaegerServer
+    Client-sided bootstrapper and manager for the Jaegar framework.
+]=]
+local JaegarServer = {
+	ImportRegistry = (ImportRegistry :: any) :: Types.ImportRegistry,
+}
+
+setmetatable(JaegarServer, { __index = Shared })
+
+export type JaegarServer = Types.JaegarServer
 
 --[=[
     @method Start
@@ -33,16 +41,18 @@ local Initialized = false
     Jaegar:Start(Locations)
     ```
 ]=]
-function JaegarServer:Start(BootstrapLocation: Instance | { Instance }): Promise.TypedPromise<any>
-    if Initialized then
-        error(`[{script.Name}] Jaegar should only be started once`)
-    end
-    
-    return Promise.new(function(Resolve, Reject)
-        ImportRegistry:Bootstrap(BootstrapLocation)
-        ImportRegistry:Prepare()
-        Resolve()
-    end)
+function JaegarServer.Start(_self: JaegarServer, bootstrapLocation: Instance | { Instance }): Promise.TypedPromise<any>
+	if initialized then
+		error(`[{script.Name}] Jaegar should only be started once`)
+	end
+
+	initialized = true
+
+	return Promise.new(function(resolve)
+		ImportRegistry:Bootstrap(bootstrapLocation)
+		ImportRegistry:Prepare()
+		resolve()
+	end)
 end
 
 --[=[
@@ -65,8 +75,8 @@ end
     return MyService
     ```
 ]=]
-function JaegarServer:CreateService(ServiceName: string, Service: any)
-    return ImportRegistry:Create("Service", ServiceName, Service)
+function JaegarServer.CreateService(_self: JaegarServer, serviceName: string, service: any)
+	return ImportRegistry:Create("Service", serviceName, service)
 end
 
 --[=[
@@ -81,8 +91,8 @@ end
     MyService:DoSomething()
     ```
 ]=]
-function JaegarServer:GetService(ServiceName: string)
-    return ImportRegistry:Catch("Service", ServiceName)
+function JaegarServer.GetService(_self: JaegarServer, serviceName: string)
+	return ImportRegistry:Catch("Service", serviceName)
 end
 
-return JaegarServer
+return JaegarServer :: JaegarServer

@@ -1,11 +1,12 @@
 --!strict
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local Jaegar = require(ReplicatedStorage.jaegar):Server()
+
+local Jaegar = require(ReplicatedStorage.Packages.Jaegar):Server()
 
 local TestServiceA = {}
 
-function TestServiceA:Prepare()
-    print("Prepared A")
+function TestServiceA:_onConstruct()
+	print("Prepared A")
 end
 
-return Jaegar:CreateService("TestServiceA", TestServiceA)
+return TestServiceA

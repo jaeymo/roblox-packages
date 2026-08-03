@@ -3,20 +3,24 @@ local Root = script.Parent.Parent
 local Registries = Root.Registries
 
 local ImportRegistry = require(Registries.ImportRegistry)
-local Types = require(Root.Data.Types)
 local Promise = require(Root.Parent.Promise)
+local Types = require(Root.Data.Types)
+
 local Shared = require(script.Parent.Shared) :: Types.SharedModule
 
+local initialized = false
+
 --[=[
-	@class JaegarClient
+	@module JaegarClient
     Client-sided bootstrapper and manager for the Jaegar framework.
 ]=]
-local JaegarClient: Types.JaegarClient = {
-    ImportRegistry = (ImportRegistry::any) :: Types.ImportRegistry,
-} :: any
-setmetatable(JaegarClient, {__index = Shared})
+local JaegarClient = {
+	ImportRegistry = ImportRegistry :: Types.ImportRegistry,
+}
 
-local Initialized = false
+setmetatable(JaegarClient, { __index = Shared })
+
+export type JaegarClient = Types.JaegarClient
 
 --[=[
     @method Start
@@ -36,16 +40,18 @@ local Initialized = false
     Jaegar:Start(Locations)
     ```
 ]=]
-function JaegarClient:Start(BootstrapLocation: Instance | { Instance }): Promise.TypedPromise<any>
-    if Initialized then
-        error(`[{script.Name}] Jaegar should only be started once`)
-    end
-    
-    return Promise.new(function(Resolve, Reject)
-        ImportRegistry:Bootstrap(BootstrapLocation)
-        ImportRegistry:Prepare()
-        Resolve()
-    end)
+function JaegarClient.Start(_self: JaegarClient, bootstrapLocation: Instance | { Instance }): Promise.TypedPromise<any>
+	if initialized then
+		error(`[{script.Name}] Jaegar should only be started once`)
+	end
+
+	initialized = true
+
+	return Promise.new(function(resolve)
+		ImportRegistry:Bootstrap(bootstrapLocation)
+		ImportRegistry:Prepare()
+		resolve()
+	end)
 end
 
 --[=[
@@ -68,8 +74,8 @@ end
     return MyController
     ```
 ]=]
-function JaegarClient:CreateController(ControllerName: string, Controller: any)
-    return ImportRegistry:Create("Controller", ControllerName, Controller)
+function JaegarClient.CreateController(_self: JaegarClient, controllerName: string, controller: any)
+	return ImportRegistry:Create("Controller", controllerName, controller)
 end
 
 --[=[
@@ -84,8 +90,8 @@ end
     MyController:DoSomething()
     ```
 ]=]
-function JaegarClient:GetController(ControllerName: string)
-    return ImportRegistry:Catch("Controller", ControllerName)
+function JaegarClient.GetController(_self: JaegarClient, ControllerName: string)
+	return ImportRegistry:Catch("Controller", ControllerName)
 end
 
-return JaegarClient
+return JaegarClient :: Types.JaegarClient

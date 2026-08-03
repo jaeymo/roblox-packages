@@ -1,61 +1,75 @@
-local Promise = require(script.Parent.Parent.Parent.Promise)
+--!strict
+local root = script.Parent.Parent
+local packages = root.Parent
+
+local Promise = require(packages.Promise)
+local Settings = require(root.Data.Settings)
 
 export type NetworkRegistry = {
-    Packets: { [string]: any }?,
-    CreatePacket: (self: NetworkRegistry, ...any) -> any,
-    GetPacket: (self: NetworkRegistry, PacketName: string) -> any,
-    Inject: (self: NetworkRegistry, Packets: { [string]: any }) -> { [string]: any },
-    SendClient: (self: NetworkRegistry, PacketName: string, Client: Player, ...any) -> any,
-    SendServer: (self: NetworkRegistry, PacketName: string, ...any) -> any,
-    Broadcast: (self: NetworkRegistry, PacketName: string, ...any) -> any,
-    BroadcastExcept: (self: NetworkRegistry, PacketName: string, Except: Player | { Player }, ...any) -> (),
-    OnInvoke: (self: NetworkRegistry, PacketName: string, Callback: (...any) -> any) -> (),
-    OnServer: (self: NetworkRegistry, PacketName: string, Callback: (Player, ...any) -> ()) -> RBXScriptConnection?,
-    OnClient: (self: NetworkRegistry, PacketName: string, Callback: (...any) -> ()) -> RBXScriptConnection?,
-}
-
-export type LoadMetric = {
-    Name: string,
-    Path: string,
-    Time: number,
-    Warned: boolean,
+	Packets: { [string]: any }?,
+	CreatePacket: (self: NetworkRegistry, ...any) -> any,
+	GetPacket: (self: NetworkRegistry, packetName: string) -> any,
+	Inject: (self: NetworkRegistry, packets: { [string]: any }) -> { [string]: any },
+	SendClient: (self: NetworkRegistry, packetName: string, client: Player, ...any) -> ...any,
+	SendServer: (self: NetworkRegistry, packetName: string, ...any) -> ...any,
+	Broadcast: (self: NetworkRegistry, packetName: string, ...any) -> (),
+	BroadcastExcept: (self: NetworkRegistry, packetName: string, except: Player | { Player }, ...any) -> (),
+	BroadcastInRange: (
+		self: NetworkRegistry,
+		packetName: string,
+		position: Vector3,
+		range: number,
+		except: Player | { Player }?,
+		...any
+	) -> (),
+	OnInvoke: (self: NetworkRegistry, packetName: string, Callback: (...any) -> any) -> (),
+	OnServer: (self: NetworkRegistry, packetName: string, Callback: (Player, ...any) -> ()) -> RBXScriptConnection?,
+	OnClient: (self: NetworkRegistry, packetName: string, Callback: (...any) -> ()) -> RBXScriptConnection?,
 }
 
 export type ImportRegistry = {
-    CachedImports: { any },
-    Controllers: { [string]: any },
-    Services: { [string]: any },
-    LoadMetrics: { LoadMetric },
+	CachedImports: { any },
+	Controllers: { [string]: any },
+	Services: { [string]: any },
+	LoadMetrics: { LoadMetric },
 
-    Bootstrap: (self: ImportRegistry, Directories: Instance | { Instance } ) -> (),
-    Create: (self: ImportRegistry, ImportType: ImportType, Identifier: string, Import: any) -> any,
-    Catch: (self: ImportRegistry, ImportType: ImportRegistry, Identifier: string) -> any,
-    Prepare: (self: ImportRegistry) -> (),
-    SimpleOutput: (self: ImportRegistry) -> (),
-    PrintLoadReport: (self: ImportRegistry) -> (),
+	Bootstrap: (self: ImportRegistry, directories: Instance | { Instance }) -> (),
+	Create: (self: ImportRegistry, importType: ImportType, identifier: string, import: any) -> any,
+	Catch: (self: ImportRegistry, importType: ImportType, identifier: string) -> any,
+	Prepare: (self: ImportRegistry) -> (),
+	SimpleOutput: (self: ImportRegistry) -> (),
+	PrintLoadReport: (self: ImportRegistry) -> (),
+}
+
+export type LoadMetric = {
+	Name: string,
+	Path: string,
+	Time: number,
+	Warned: boolean,
 }
 
 export type ImportType = "Controller" | "Service"
 
 export type SharedModule = {
-    Network: NetworkRegistry,
-    GetNetwork: (self: SharedModule) -> NetworkRegistry,
+	Network: NetworkRegistry,
+	GetNetwork: (self: SharedModule) -> NetworkRegistry,
+	GetSettings: (self: SharedModule) -> typeof(Settings),
 }
 
 export type JaegarServer = SharedModule & {
-    ImportRegistry: ImportRegistry,
+	ImportRegistry: ImportRegistry,
 
-    Start: (self: JaegarServer, BootstrapLocation: Instance | { Instance }) -> Promise.TypedPromise<any>,
-    CreateService: (self: JaegarServer, ServiceName: string, Service: any) -> any,
-    GetService: (self: JaegarServer, ServiceName: string) -> any,
+	Start: (self: JaegarServer, bootstrapLocation: Instance | { Instance }) -> Promise.TypedPromise<any>,
+	CreateService: (self: JaegarServer, serviceName: string, service: any) -> any,
+	GetService: (self: JaegarServer, serviceName: string) -> any,
 }
 
 export type JaegarClient = SharedModule & {
-    ImportRegistry: ImportRegistry,
+	ImportRegistry: ImportRegistry,
 
-    Start: (self: JaegarClient, BootstrapLocation: Instance | { Instance }) -> Promise.TypedPromise<any>,
-    CreateController: (self: JaegarClient, ControllerName: string, Controller: any) -> any,
-    GetController: (self: JaegarClient, ControllerName: string) -> any,
+	Start: (self: JaegarClient, bootstrapLocation: Instance | { Instance }) -> Promise.TypedPromise<any>,
+	CreateController: (self: JaegarClient, controllerName: string, controller: any) -> any,
+	GetController: (self: JaegarClient, controllerName: string) -> any,
 }
 
-return {}
+return 0
