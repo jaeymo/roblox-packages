@@ -3,7 +3,7 @@
 --[[
 	Jaegar: A lightweight game framework
 	Author: jaeymo
-	Version: 1.8.0
+	Version: 1.9.0
 	License: MIT
 	Created: 09/28/2025
 	
@@ -18,7 +18,7 @@ local IS_SERVER = RunService:IsServer()
 local IS_RUNNING = RunService:IsRunning()
 
 local Jaegar = {
-	Version = "1.8.0",
+	Version = "1.9.0",
 }
 
 --[=[

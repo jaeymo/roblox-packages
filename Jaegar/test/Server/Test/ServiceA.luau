@@ -14,6 +14,11 @@ export type ServiceA = typeof(ServiceA)
 
 -- Runs when the module "wakes" up
 function ServiceA.OnAwake(self: ServiceA)
+	print("[ServiceA] Woke up!")
+	print(self)
+end
+
+function ServiceA.OnInit(self: ServiceA)
 	return Jaegar:GetPromise().new(function(resolve)
 		print("[Service A] Initialized!")
 		print(self)

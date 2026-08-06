@@ -8,11 +8,15 @@ local Types = require(root.Data.Types)
 -- How much time must pass for a load warning to be logged
 local LOAD_WARNING_TIME = Settings.LoadWarningTime
 
--- The method name when calling a modules start
+-- The method name for a method ran during the "Awake" phase
+local AWAKE_METHOD = Settings.AwakeMethod
+
+-- The method name for a method ran during the "Init" phase
+local INIT_METHOD = Settings.InitMethod
+
+-- The method name for a method ran during the "Start" phase
 local START_METHOD = Settings.StartMethod
 
--- The method name when calling a modules init
-local INIT_METHOD = Settings.InitMethod
 local ImportRegistry = {
 	LoadMetrics = {} :: { Types.LoadMetric },
 	CachedImports = {} :: { any },
@@ -131,11 +135,12 @@ end
 
 function ImportRegistry.RunLifecycle(self: ImportRegistry)
 	INIT_METHOD = Settings.InitMethod
+	AWAKE_METHOD = Settings.AwakeMethod
 	START_METHOD = Settings.StartMethod
 
 	local initPromises: { Promise.TypedPromise<any> } = {}
 
-	local function invoke(import: any, methodName: string): Promise.TypedPromise<any>?
+	local function invoke(import: any, methodName: string, allowPromise: boolean): Promise.TypedPromise<any>?
 		if type(import) ~= "table" then
 			return nil
 		end
@@ -147,36 +152,41 @@ function ImportRegistry.RunLifecycle(self: ImportRegistry)
 
 		local success, result = pcall(method, import)
 		if not success then
-			warn(
-				string.format(
-					`[{script.Name}] {tostring(import)}.{methodName} failed:\n{tostring(result)}`,
-					tostring(import),
-					methodName,
-					tostring(result)
-				)
-			)
+			warn(`[{script.Name}] {tostring(import)}.{methodName} failed:\n{tostring(result)}`)
 			return nil
 		end
 
 		if Promise.is(result) then
+			if not allowPromise then
+				error(
+					`[{script.Name}] {tostring(import)}.{method} returned a Promise. Awake methods must be synchronous.`
+				)
+			end
 			return result
 		end
 
 		return nil
 	end
 
+	-- Phase 1: Awake (sync)
 	for _, import in self.CachedImports do
-		local promise = invoke(import, INIT_METHOD)
+		invoke(import, AWAKE_METHOD, false)
+	end
+
+	-- Phase 2: Init (async)
+	for _, import in self.CachedImports do
+		local promise = invoke(import, INIT_METHOD, true)
 
 		if promise then
 			table.insert(initPromises, promise)
 		end
 	end
 
+	-- Phase 3: Start (after all init promises)
 	Promise.all(initPromises)
 		:andThen(function()
 			for _, import in self.CachedImports do
-				invoke(import, START_METHOD)
+				invoke(import, START_METHOD, false)
 			end
 		end)
 		:catch(function(err)
