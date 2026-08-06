@@ -1,11 +1,11 @@
 [package]
 name = 'jaeymo/jaegar'
 description = "Lightweight game framework"
-version = "1.7.2"
+version = "1.8.0"
 license = "MIT"
 registry = "https://github.com/UpliftGames/wally-index"
 realm = "shared"
 
 [dependencies]
-Promise = "evaera/promise@4.0.0"
+Promise = "howmanysmall/typed-promise@4.0.6"
 Packet = "jaeymo/suphi-packet@0.1.0"

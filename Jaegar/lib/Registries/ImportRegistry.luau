@@ -1,21 +1,18 @@
 --!strict
 local root = script.Parent.Parent
 
+local Promise = require(root.Parent.Promise)
 local Settings = require(root.Data.Settings)
 local Types = require(root.Data.Types)
 
 -- How much time must pass for a load warning to be logged
 local LOAD_WARNING_TIME = Settings.LoadWarningTime
 
--- The name for the method called in modules when loading
-local STARTUP_METHOD = Settings.StartupMethod
+-- The method name when calling a modules start
+local START_METHOD = Settings.StartMethod
 
--- Should we use task.spawn() for start methods? Or should it be deterministic? You choose!
-local PARALLEL_STARTUP = Settings.ParallelStartup
-
-type LoadMetric = Types.LoadMetric
-type ImportType = Types.ImportType
-
+-- The method name when calling a modules init
+local INIT_METHOD = Settings.InitMethod
 local ImportRegistry = {
 	LoadMetrics = {} :: { Types.LoadMetric },
 	CachedImports = {} :: { any },
@@ -23,6 +20,10 @@ local ImportRegistry = {
 	Controllers = {} :: { [string]: any },
 	Services = {} :: { [string]: any },
 }
+
+type LoadMetric = Types.LoadMetric
+
+type ImportType = Types.ImportType
 
 export type ImportRegistry = typeof(ImportRegistry)
 
@@ -128,29 +129,59 @@ function ImportRegistry.Catch(_self: ImportRegistry, importType: ImportType, ide
 	return storageLocation[identifier]
 end
 
-function ImportRegistry.Prepare(self: ImportRegistry)
-	STARTUP_METHOD = Settings.StartupMethod
-	PARALLEL_STARTUP = Settings.ParallelStartup
+function ImportRegistry.RunLifecycle(self: ImportRegistry)
+	INIT_METHOD = Settings.InitMethod
+	START_METHOD = Settings.StartMethod
 
-	local function handleCall(import: any)
-		if type(import) == "table" then
-			pcall(function()
-				if import[STARTUP_METHOD] then
-					import[STARTUP_METHOD](import)
-				end
-			end)
+	local initPromises: { Promise.TypedPromise<any> } = {}
+
+	local function invoke(import: any, methodName: string): Promise.TypedPromise<any>?
+		if type(import) ~= "table" then
+			return nil
 		end
+
+		local method = import[methodName]
+		if type(method) ~= "function" then
+			return nil
+		end
+
+		local success, result = pcall(method, import)
+		if not success then
+			warn(
+				string.format(
+					`[{script.Name}] {tostring(import)}.{methodName} failed:\n{tostring(result)}`,
+					tostring(import),
+					methodName,
+					tostring(result)
+				)
+			)
+			return nil
+		end
+
+		if Promise.is(result) then
+			return result
+		end
+
+		return nil
 	end
 
 	for _, import in self.CachedImports do
-		if PARALLEL_STARTUP then
-			task.spawn(function()
-				handleCall(import)
-			end)
-		else
-			handleCall(import)
+		local promise = invoke(import, INIT_METHOD)
+
+		if promise then
+			table.insert(initPromises, promise)
 		end
 	end
+
+	Promise.all(initPromises)
+		:andThen(function()
+			for _, import in self.CachedImports do
+				invoke(import, START_METHOD)
+			end
+		end)
+		:catch(function(err)
+			error(err)
+		end)
 end
 
 function ImportRegistry.SimpleOutput(self: ImportRegistry)

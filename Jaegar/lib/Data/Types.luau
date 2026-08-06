@@ -52,6 +52,9 @@ export type ImportType = "Controller" | "Service"
 
 export type SharedModule = {
 	Network: NetworkRegistry,
+	Promise: typeof(Promise),
+
+	GetPromise: (self: SharedModule) -> typeof(Promise),
 	GetNetwork: (self: SharedModule) -> NetworkRegistry,
 	GetSettings: (self: SharedModule) -> typeof(Settings),
 }

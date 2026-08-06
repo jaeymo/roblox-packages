@@ -2,7 +2,8 @@
     "name": "jaegar",
     "private": true,
     "scripts": {
-        "build:dev": "wally install && rojo sourcemap dev.project.json --output sourcemap.json && wally-package-types --sourcemap sourcemap.json Packages"
+        "build:dev": "wally install && rojo sourcemap dev.project.json --output sourcemap.json && wally-package-types --sourcemap sourcemap.json Packages",
+        "start:dev": "rojo serve dev.project.json"
     },
     "dependencies": {
         "@jaeymo/toybox": "^1.2.0"

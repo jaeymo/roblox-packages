@@ -49,7 +49,7 @@ function JaegarClient.Start(_self: JaegarClient, bootstrapLocation: Instance | {
 
 	return Promise.new(function(resolve)
 		ImportRegistry:Bootstrap(bootstrapLocation)
-		ImportRegistry:Prepare()
+		ImportRegistry:RunLifecycle()
 		resolve()
 	end)
 end

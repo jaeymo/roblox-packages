@@ -8,9 +8,14 @@ version = "4.0.0"
 dependencies = []
 
 [[package]]
+name = "howmanysmall/typed-promise"
+version = "4.0.6"
+dependencies = [["Promise", "evaera/promise@4.0.0"]]
+
+[[package]]
 name = "jaeymo/jaegar"
 version = "1.7.2"
-dependencies = [["Packet", "jaeymo/suphi-packet@0.1.0"], ["Promise", "evaera/promise@4.0.0"]]
+dependencies = [["Packet", "jaeymo/suphi-packet@0.1.0"], ["Promise", "howmanysmall/typed-promise@4.0.6"]]
 
 [[package]]
 name = "jaeymo/suphi-packet"

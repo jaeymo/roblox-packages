@@ -1,7 +1,8 @@
 --!strict
 local SETTINGS = {
-	StartupMethod = "jaegarInit",
-	ParallelStartup = true,
+	InitMethod = "jaegarInit",
+	StartMethod = "jaegarStart",
+
 	LoadWarningTime = 15,
 }
 
