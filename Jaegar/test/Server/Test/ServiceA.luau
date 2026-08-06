@@ -18,6 +18,7 @@ function ServiceA.OnAwake(self: ServiceA)
 	print(self)
 end
 
+-- Runs when the module is initialized (after all wake up)
 function ServiceA.OnInit(self: ServiceA)
 	return Jaegar:GetPromise().new(function(resolve)
 		print("[Service A] Initialized!")
@@ -26,7 +27,7 @@ function ServiceA.OnInit(self: ServiceA)
 	end)
 end
 
--- Runs when *all* modules have awoken
+-- Runs when *all* modules have initialized
 function ServiceA.OnStart(self: ServiceA)
 	print("[Service A] Started!")
 	print(self)

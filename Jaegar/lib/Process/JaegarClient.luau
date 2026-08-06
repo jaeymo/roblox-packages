@@ -15,6 +15,7 @@ local initialized = false
     Client-sided bootstrapper and manager for the Jaegar framework.
 ]=]
 local JaegarClient = {
+	LifecyclePhaseChanged = ImportRegistry.LifecyclePhaseChanged,
 	ImportRegistry = ImportRegistry :: Types.ImportRegistry,
 }
 

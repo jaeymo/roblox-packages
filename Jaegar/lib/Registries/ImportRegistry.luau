@@ -3,7 +3,11 @@ local root = script.Parent.Parent
 
 local Promise = require(root.Parent.Promise)
 local Settings = require(root.Data.Settings)
+local Signal = require(root.Parent.Signal)
 local Types = require(root.Data.Types)
+
+-- The name of the flag variable that marks a module to be ignored from loading
+local IGNORE_MODULE_LOAD_TAG_NAME = Settings.IgnoreModuleLoadTagName
 
 -- How much time must pass for a load warning to be logged
 local LOAD_WARNING_TIME = Settings.LoadWarningTime
@@ -23,11 +27,15 @@ local ImportRegistry = {
 
 	Controllers = {} :: { [string]: any },
 	Services = {} :: { [string]: any },
+
+	LifecyclePhaseChanged = Signal.new() :: Signal.Signal<LifecyclePhase>,
 }
 
 type LoadMetric = Types.LoadMetric
 
 type ImportType = Types.ImportType
+
+type LifecyclePhase = Types.LifecyclePhase
 
 export type ImportRegistry = typeof(ImportRegistry)
 
@@ -58,12 +66,18 @@ local function timedRequire(module: ModuleScript): (boolean, any, number, boolea
 end
 
 local function request(container: Instance)
+	IGNORE_MODULE_LOAD_TAG_NAME = Settings.IgnoreModuleLoadTagName
+
 	for _, import in container:GetChildren() do
 		if import == root or import:IsDescendantOf(root) then
 			continue
 		end
 
 		if import:IsA("ModuleScript") then
+			if import:HasTag(IGNORE_MODULE_LOAD_TAG_NAME) then
+				continue
+			end
+
 			local success, cached, timeTaken, warned = timedRequire(import)
 
 			table.insert(ImportRegistry.LoadMetrics, {
@@ -134,6 +148,7 @@ function ImportRegistry.Catch(_self: ImportRegistry, importType: ImportType, ide
 end
 
 function ImportRegistry.RunLifecycle(self: ImportRegistry)
+	-- Doing this junk so the settings are changeable at runtime for Wally users
 	INIT_METHOD = Settings.InitMethod
 	AWAKE_METHOD = Settings.AwakeMethod
 	START_METHOD = Settings.StartMethod
@@ -168,10 +183,14 @@ function ImportRegistry.RunLifecycle(self: ImportRegistry)
 		return nil
 	end
 
+	self.LifecyclePhaseChanged:Fire("Awake")
+
 	-- Phase 1: Awake (sync)
 	for _, import in self.CachedImports do
 		invoke(import, AWAKE_METHOD, false)
 	end
+
+	self.LifecyclePhaseChanged:Fire("Init")
 
 	-- Phase 2: Init (async)
 	for _, import in self.CachedImports do
@@ -181,6 +200,8 @@ function ImportRegistry.RunLifecycle(self: ImportRegistry)
 			table.insert(initPromises, promise)
 		end
 	end
+
+	self.LifecyclePhaseChanged:Fire("Start")
 
 	-- Phase 3: Start (after all init promises)
 	Promise.all(initPromises)
@@ -192,6 +213,8 @@ function ImportRegistry.RunLifecycle(self: ImportRegistry)
 		:catch(function(err)
 			error(err)
 		end)
+
+	self.LifecyclePhaseChanged:Fire("Finished")
 end
 
 function ImportRegistry.SimpleOutput(self: ImportRegistry)

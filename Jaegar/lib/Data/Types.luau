@@ -50,6 +50,8 @@ export type LoadMetric = {
 
 export type ImportType = "Controller" | "Service"
 
+export type LifecyclePhase = "Awake" | "Init" | "Start" | "Finished"
+
 export type SharedModule = {
 	Network: NetworkRegistry,
 	Promise: typeof(Promise),
