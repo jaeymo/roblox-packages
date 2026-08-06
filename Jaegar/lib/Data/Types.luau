@@ -4,6 +4,7 @@ local packages = root.Parent
 
 local Promise = require(packages.Promise)
 local Settings = require(root.Data.Settings)
+local Signal = require(packages.Signal)
 
 export type NetworkRegistry = {
 	Packets: { [string]: any }?,
@@ -50,7 +51,7 @@ export type LoadMetric = {
 
 export type ImportType = "Controller" | "Service"
 
-export type LifecyclePhase = "Awake" | "Init" | "Start" | "Finished"
+export type LifecyclePhase = "Prerequisite" | "Awake" | "Init" | "Start" | "Done"
 
 export type SharedModule = {
 	Network: NetworkRegistry,
@@ -59,10 +60,12 @@ export type SharedModule = {
 	GetPromise: (self: SharedModule) -> typeof(Promise),
 	GetNetwork: (self: SharedModule) -> NetworkRegistry,
 	GetSettings: (self: SharedModule) -> typeof(Settings),
+	GetPhase: (self: SharedModule) -> LifecyclePhase,
 }
 
 export type JaegarServer = SharedModule & {
 	ImportRegistry: ImportRegistry,
+	LifecyclePhaseChanged: Signal.Signal<LifecyclePhase>,
 
 	Start: (self: JaegarServer, bootstrapLocation: Instance | { Instance }) -> Promise.TypedPromise<any>,
 	CreateService: (self: JaegarServer, serviceName: string, service: any) -> any,
@@ -71,6 +74,7 @@ export type JaegarServer = SharedModule & {
 
 export type JaegarClient = SharedModule & {
 	ImportRegistry: ImportRegistry,
+	LifecyclePhaseChanged: Signal.Signal<LifecyclePhase>,
 
 	Start: (self: JaegarClient, bootstrapLocation: Instance | { Instance }) -> Promise.TypedPromise<any>,
 	CreateController: (self: JaegarClient, controllerName: string, controller: any) -> any,

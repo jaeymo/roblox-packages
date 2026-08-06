@@ -28,6 +28,7 @@ local ImportRegistry = {
 	Controllers = {} :: { [string]: any },
 	Services = {} :: { [string]: any },
 
+	Phase = "Prerequisite" :: LifecyclePhase,
 	LifecyclePhaseChanged = Signal.new() :: Signal.Signal<LifecyclePhase>,
 }
 
@@ -104,6 +105,15 @@ end
 
 local function getStorageLocation(importType: ImportType): { [string]: any }
 	return (importType == "Service" and ImportRegistry.Services) or ImportRegistry.Controllers
+end
+
+function ImportRegistry.SetPhase(self: ImportRegistry, phase: LifecyclePhase)
+	if phase == self.Phase then
+		return
+	end
+
+	self.Phase = phase
+	self.LifecyclePhaseChanged:Fire(phase)
 end
 
 function ImportRegistry.Bootstrap(_self: ImportRegistry, directories: Instance | { Instance })
@@ -183,14 +193,14 @@ function ImportRegistry.RunLifecycle(self: ImportRegistry)
 		return nil
 	end
 
-	self.LifecyclePhaseChanged:Fire("Awake")
+	self:SetPhase("Awake")
 
 	-- Phase 1: Awake (sync)
 	for _, import in self.CachedImports do
 		invoke(import, AWAKE_METHOD, false)
 	end
 
-	self.LifecyclePhaseChanged:Fire("Init")
+	self:SetPhase("Init")
 
 	-- Phase 2: Init (async)
 	for _, import in self.CachedImports do
@@ -201,7 +211,7 @@ function ImportRegistry.RunLifecycle(self: ImportRegistry)
 		end
 	end
 
-	self.LifecyclePhaseChanged:Fire("Start")
+	self:SetPhase("Start")
 
 	-- Phase 3: Start (after all init promises)
 	Promise.all(initPromises)
@@ -214,7 +224,7 @@ function ImportRegistry.RunLifecycle(self: ImportRegistry)
 			error(err)
 		end)
 
-	self.LifecyclePhaseChanged:Fire("Finished")
+	self:SetPhase("Done")
 end
 
 function ImportRegistry.SimpleOutput(self: ImportRegistry)

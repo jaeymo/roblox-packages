@@ -1,8 +1,12 @@
 --!strict
+local root = script.Parent.Parent
+
+local ImportRegistry = require(root.Registries.ImportRegistry)
+
 local Shared = {
-	Network = require(script.Parent.Parent.Registries.NetworkRegistry),
-	Settings = require(script.Parent.Parent.Data.Settings),
-	Promise = require(script.Parent.Parent.Parent.Promise),
+	Network = require(root.Registries.NetworkRegistry),
+	Settings = require(root.Data.Settings),
+	Promise = require(root.Parent.Promise),
 }
 
 function Shared:GetNetwork()
@@ -11,6 +15,10 @@ end
 
 function Shared:GetSettings()
 	return Shared.Settings
+end
+
+function Shared:GetPhase()
+	return ImportRegistry.Phase
 end
 
 function Shared:GetPromise()
