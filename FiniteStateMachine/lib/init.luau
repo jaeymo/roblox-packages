@@ -26,6 +26,7 @@ type NamingConvention = {
 	OnEnter: string,
 	OnExit: string,
 	OnUpdate: string,
+	CanEnter: string,
 }
 
 export type Janitor = Janitor.Janitor
@@ -35,13 +36,15 @@ export type FSMConfig = {
 		OnEnter: string?,
 		OnExit: string?,
 		OnUpdate: string?,
+		CanEnter: string?,
 	}?
 }
 
 export type State = {
-	OnEnter: ((self: State) -> ())?,
-	OnExit: ((self: State) -> ())?,
-	OnUpdate: ((self: State, dt: number) -> ())?,
+	CanEnter: ((self: State, context: any) -> ())?,
+	OnEnter: ((self: State, context: any) -> ())?,
+	OnExit: ((self: State, context: any) -> ())?,
+	OnUpdate: ((self: State, dt: number, context: any) -> ())?,
 }
 
 export type Transition<T> = {
@@ -114,12 +117,14 @@ end
 local function resolveNamingConvention(convention: {
 	OnEnter: string?,
 	OnExit: string?,
-	OnUpdate: string?
+	OnUpdate: string?,
+	CanEnter: string?,
 }?): NamingConvention
 	return {
 		OnEnter = convention and convention.OnEnter or "OnEnter",
 		OnExit = convention and convention.OnExit or "OnExit",
 		OnUpdate = convention and convention.OnUpdate or "OnUpdate",
+		CanEnter = convention and convention.CanEnter or "CanEnter",
 	}
 end
 
@@ -300,7 +305,7 @@ function FiniteStateMachine.Stop<T>(self: FiniteStateMachine<T>)
 	end
 
 	if self.CurrentState and self.States[self.CurrentState] then
-		safeCall(self.States[self.CurrentState], self._namingConvention.OnExit, self.States[self.CurrentState])
+		safeCall(self.States[self.CurrentState], self._namingConvention.OnExit, self.States[self.CurrentState], self.Context)
 	end
 
 	self.Janitor:Cleanup()
@@ -335,11 +340,11 @@ function FiniteStateMachine.SetState<T>(self: FiniteStateMachine<T>, newStateNam
 
 	if self.CurrentState then
 		local oldState = self.States[self.CurrentState]
-		safeCall(oldState, self._namingConvention.OnExit, oldState)
+		safeCall(oldState, self._namingConvention.OnExit, oldState, self.Context)
 	end
 
 	self.CurrentState = newStateName
-	safeCall(newStateProfile, self._namingConvention.OnEnter, newStateProfile)
+	safeCall(newStateProfile, self._namingConvention.OnEnter, newStateProfile, self.Context)
 end
 
 --[=[
@@ -395,7 +400,7 @@ function FiniteStateMachine._update<T>(self: FiniteStateMachine<T>, dt: number)
 	end
 
 	local state = self.States[self.CurrentState]
-	safeCall(state, self._namingConvention.OnUpdate, state, dt)
+	safeCall(state, self._namingConvention.OnUpdate, state, dt, self.Context)
 
 	local stateTransitions = self.Transitions[self.CurrentState] :: {Transition<T>}
 	if not stateTransitions then
